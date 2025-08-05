@@ -1,15 +1,16 @@
 ﻿
-CREATE     PROCEDURE [dbo].[Employee_GetByDomainName] @DomainUsername VARCHAR(50)
+/*<info serverAlias="HRM-NexHRM,HRM-LumiHRM,HRM-NexVisionHRM" executers="wsv_hrm" isFunction="0"></info>*/
+CREATE OR ALTER PROCEDURE [dbo].[Employee_GetByDomainName] @DomainUsername VARCHAR(50)
 AS
 /*
-Created: 20160205@Quinn.Vo
-Task: Get employee info by domain username.
-DB: NexHRM
-Original: 
+	Created: 20160205@Quinn.Vo
+	Task: Get employee info by domain username.
+	DB: NexHRM
+	Original: 
 
-Revisions:  
-Param's Explanation:
-
+	Revisions: 
+		20250805@Henry.Dinh: Update Group table to bodb_HRM.dbo.[Group] and LeaderHR
+	Param's Explanation:
 */
 BEGIN
     SET NOCOUNT ON;
@@ -22,12 +23,12 @@ BEGIN
 	,e.[Enabled]
 	,e.[IsDeleted]
 	,e.[Roles]
-	,ISNULL(g.Id, 0) AS TeamId
+	,ISNULL(g.GroupId, 0) AS TeamId
 	,g.Code AS TeamCode
 	,g.GroupTeamId
-	,CAST(CASE WHEN e.Id = 125 OR e.Id = 142 THEN 1 ELSE 0 END AS BIT) AS IsLeaderHR
+	,CAST(CASE WHEN e.Id = 6089 OR e.Id = 6264 THEN 1 ELSE 0 END AS BIT) AS IsLeaderHR
 	FROM dbo.Employee AS e WITH (NOLOCK) 
-		LEFT JOIN dbo.EmployeeGroup AS g WITH (NOLOCK) ON e.GroupId = g.Id
+		LEFT JOIN bodb_HRM.dbo.[Group] AS g WITH (NOLOCK) ON e.GroupId = g.GroupId
 	WHERE e.DomainUsername = @DomainUsername
 	AND e.isDeleted = 0
 END
