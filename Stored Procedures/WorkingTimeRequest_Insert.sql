@@ -1,5 +1,5 @@
-﻿
-CREATE   PROCEDURE [dbo].[WorkingTimeRequest_Insert] @id BIGINT OUT
+﻿/*<info serverAlias="HRM-NexHRM,HRM-LumiHRM,HRM-NexVisionHRM" executers="wsv_hrm" isFunction="0"></info>*/
+ALTER PROCEDURE [dbo].[WorkingTimeRequest_Insert] @id BIGINT OUT
 	,@EmpId INT
 	,@RequestType SMALLINT
 	,@IsPlanned BIT
@@ -25,7 +25,8 @@ AS
 	Original: 
 
 	Revisions:    
-		- 20250507@Henry.Dinh: update HR code to HR-ADM
+		20250507@Henry.Dinh: update HR code to HR-ADM
+		20250805@Henry.Dinh: update auto approve check in checkout request
 	Param's Explanation:
 */
 BEGIN
@@ -562,6 +563,7 @@ BEGIN
 				WHERE e.Id = @empId
 					AND (gs.ApproverId IS NOT NULL OR es.ApproverId IS NOT NULL))
 			OR @AutoApproveRequest = 1
+			OR @ErrCode = - 1
 			)
 	BEGIN
 		EXEC [dbo].[WorkingTimeRequest_ApproveRequest] @RequestID = @id
@@ -569,7 +571,6 @@ BEGIN
 			,@ApprovedDate = @CreatedDate
 			,@ErrCode = @ErrCode
 			,@ErrMsg = @ErrMsg
-
 		SET @ErrCode = - 1
 	END
 	ELSE
