@@ -1,14 +1,19 @@
-﻿
-CREATE   PROCEDURE [dbo].[Employee_Insert_CheckExist] @Nickname NVARCHAR(20)
-	,@Code VARCHAR(20)
+﻿/*<info serverAlias="HRM-NexHRM,HRM-LumiHRM,HRM-NexVisionHRM" executers="wsv_hrm" isFunction="0"></info>*/
+
+ALTER PROCEDURE [dbo].[Employee_Insert_CheckExist]
+(
+    @Nickname NVARCHAR(20)
+    ,@Code VARCHAR(20)
+)
 AS
 /*
-Created: 20250306@Tim
-Task: check code, nickname available
-DB: HRM
+    Created: 20250306@Tim
+    Task: check code, nickname available
+    DB: NexHRM
 
-Revisions:
-    20250306@Tim: initial - [Redmine: #217976]
+    Revisions:
+        20250306@Tim: initial - [Redmine: #217976]
+        20250819@Tim: restructure [Redmine: #235678]
 */
 BEGIN
 	SET NOCOUNT ON;
@@ -23,11 +28,11 @@ BEGIN
 		,@Nickname_exist NVARCHAR(20)
 		,@FullName_exist NVARCHAR(50)
 
-	SELECT TOP 1 @EmpId_exist = e.EmpId
-		,@FullName_exist = FullName
-		,@Nickname_exist = Nickname
+	SELECT TOP 1 @EmpId_exist = ce.EmpId
+		,@FullName_exist = e.FullName
+		,@Nickname_exist = ce.Nickname
 	FROM bodb_HRM.dbo.Employee AS e WITH (NOLOCK)
-		INNER JOIN bodb_HRM.dbo.CompanyEmployee AS ce WITH (NOLOCK) ON ce.EmpId = e.EmpId 
+		INNER JOIN bodb_HRM.dbo.CompanyEmployee AS ce WITH (NOLOCK) ON ce.UserId = e.UserId 
 	WHERE Code = @Code
 		AND ce.CompanyId = @CompanyId
 
@@ -39,16 +44,16 @@ BEGIN
 		RETURN
 	END
 
-	SELECT TOP 1 @EmpId_exist = e.EmpId
-		,@FullName_exist = FullName
-		,@Nickname_exist = Nickname
+	SELECT TOP 1 @EmpId_exist = ce.EmpId
+		,@FullName_exist = e.FullName
+		,@Nickname_exist = ce.Nickname
 	FROM bodb_HRM.dbo.Employee AS e WITH (NOLOCK)
-		INNER JOIN bodb_HRM.dbo.CompanyEmployee AS ce WITH (NOLOCK) ON ce.EmpId = E.EmpId 
+		INNER JOIN bodb_HRM.dbo.CompanyEmployee AS ce WITH (NOLOCK) ON ce.UserId = e.UserId 
 	WHERE NickName = @Nickname
 		AND ce.CompanyId = @CompanyId
 		AND (
-			e.isDeleted = 0
-			OR e.[Enabled] = 1
+			ce.isDeleted = 0
+			OR ce.[Enabled] = 1
 			)
 
 	IF ISNULL(@EmpId_exist, 0) <> 0

@@ -1,13 +1,13 @@
-﻿
+﻿/*<info serverAlias="HRM-NexHRM,HRM-LumiHRM,HRM-NexVisionHRM" executers="wsv_hrm" isFunction="0"></info>*/
 
-CREATE PROCEDURE [dbo].[Employee_Insert]
+ALTER PROCEDURE [dbo].[Employee_Insert]
 (
     @UserId INT
     ,@FullName NVARCHAR(50)
     ,@Nickname NVARCHAR(20)
     ,@DomainUsername VARCHAR(50)
-    ,@code VARCHAR(20)
-    ,@password NVARCHAR(100)
+    ,@Code VARCHAR(20)
+    ,@Password NVARCHAR(100)
     ,@monShift INT = NULL
     ,@tueShift INT = NULL
     ,@wedShift INT = NULL
@@ -27,7 +27,8 @@ AS
     DB: NexHRM
 
     Revisions:    
-        20250507@Henry.Dinh: insert password
+        20250507@Henry: insert password
+        20250819@Tim: restructure [Redmine: #235678]
     Param's Explanation:
 */
 BEGIN
@@ -35,15 +36,15 @@ BEGIN
 
 	DECLARE @CompanyId INT
         ,@OldEmpId INT
+        ,@NewEmpId INT
 
 	SELECT @CompanyId = [Value]
     FROM dbo.SystemSetting WITH (NOLOCK)
     WHERE [Name] = 'CompanyId'
 
-    SELECT @OldEmpId = MAX(e.OldEmpId)
-    FROM bodb_HRM.dbo.Employee AS e WITH (NOLOCK)
-        INNER JOIN bodb_HRM.dbo.CompanyEmployee AS c WITH (NOLOCK) ON e.EmpId = c.EmpId
-    WHERE c.CompanyId = @CompanyId
+    SELECT @OldEmpId = MAX(OldEmpId)
+    FROM bodb_HRM.dbo.CompanyEmployee WITH (NOLOCK)
+    WHERE CompanyId = @CompanyId
 
     SET @OldEmpId = ISNULL(@OldEmpId, 0) + 1
 
@@ -59,31 +60,16 @@ BEGIN
         RETURN
     END
 
-    INSERT INTO bodb_HRM.dbo.Employee (
-        Code
-        ,FullName
-        ,Nickname
-        ,DOB
-        ,CreatedDate
-        ,CreatedBy
-        ,OldEmpId
-		,EmpId
-		,[Enabled]
-        )
-    VALUES (
-        @Code
-        ,@FullName
-        ,@NickName
-        ,CAST('1-1-1990' AS SMALLDATETIME)
-        ,dbo.fnc_GetClientDateTime()
-        ,@createBy
-        ,@OldEmpId
-		,@UserId
-		,1
-        )
+    SELECT @NewEmpId = MAX(EmpId)
+    FROM bodb_HRM.dbo.CompanyEmployee WITH (NOLOCK)
 
-	INSERT INTO bodb_HRM.dbo.CompanyEmployee(CompanyId, EmpId, DomainUsername, [Password], GroupId, [Enabled], IsDeleted, IsSpecialUser)
-	VALUES (@CompanyId, @UserId, @DomainUsername, @Password, @GroupId, 0, 0, 0)
+    SET @NewEmpId = ISNULL(@NewEmpId, 0) + 1
+
+    INSERT INTO bodb_HRM.dbo.Employee (UserId, FullName, DOB, [Password])
+    VALUES (@UserId, @FullName, '1990-01-01', @Password)
+
+	INSERT INTO bodb_HRM.dbo.CompanyEmployee(CompanyId, EmpId, Code, DomainUsername, GroupId, [Enabled], IsDeleted, IsSpecialUser, CreatedDate, CreatedBy)
+	VALUES (@CompanyId, @NewEmpId, @Code, @DomainUsername, @GroupId, 1, 0, 0, GETDATE(), @createBy)
 
     INSERT INTO dbo.EmployeeShift (
         [EmpId]
@@ -119,7 +105,4 @@ BEGIN
     EXECUTE dbo.EmployeeCalendar_Insert @UserId
         ,@fromdate
         ,@todate
-
-    SELECT @ErrCode = 0
-        ,@ErrMsg = ''
 END
