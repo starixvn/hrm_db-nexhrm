@@ -1,4 +1,5 @@
-﻿ALTER   PROCEDURE [dbo].[EmployeeSupervisor_Get]
+﻿/*<info serverAlias="HRM-NexHRM,HRM-LumiHRM,HRM-NexVisionHRM" executers="wsv_hrm" isFunction="0"></info>*/
+ALTER   PROCEDURE [dbo].[EmployeeSupervisor_Get]
 AS
 /*
 Created: 20240426@Lilac.Nguyen
@@ -28,7 +29,7 @@ BEGIN
 			) AS Approvers
         FROM dbo.EmployeeSupervisor AS es WITH (NOLOCK)
 			LEFT JOIN dbo.Employee AS em WITH (NOLOCK) ON em.Id = es.EmpId
-			LEFT JOIN bodb_HRM_bk.dbo.CompanyEmployee AS ce ON ce.EmpId = es.ApproverId
+			LEFT JOIN bodb_HRM.dbo.CompanyEmployee AS ce ON ce.EmpId = es.ApproverId
         WHERE ISNULL(es.IsDeleted, 0) = 0
 		GROUP BY es.EmpId, em.NickName, em.FullName
 END

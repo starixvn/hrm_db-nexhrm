@@ -1,4 +1,4 @@
-﻿
+﻿/*<info serverAlias="HRM-NexHRM,HRM-LumiHRM,HRM-NexVisionHRM" executers="wsv_hrm" isFunction="0"></info>*/
 ALTER   PROCEDURE [dbo].[WorkingTimeRequest_GetRequestByDate] @role INT
     ,@fromdate DATETIME
     ,@todate DATETIME
@@ -237,8 +237,8 @@ BEGIN
         LEFT JOIN dbo.Shift s2 WITH (NOLOCK) ON s2.Id = r.ToShift
         LEFT JOIN dbo.Shift s3 WITH (NOLOCK) ON s3.id = c.ShiftID
         LEFT JOIN dbo.LeaveType lv WITH (NOLOCK) ON lv.Id = r.LeaveTypeID
-        LEFT JOIN bodb_HRM_bk.dbo.CompanyEmployee ap WITH (NOLOCK) ON ap.EmpId = r.ProcessedBy
-        LEFT JOIN bodb_HRM_bk.dbo.Employee ape WITH (NOLOCK) ON ape.UserId = ap.UserId
+        LEFT JOIN bodb_HRM.dbo.CompanyEmployee ap WITH (NOLOCK) ON ap.EmpId = r.ProcessedBy
+        LEFT JOIN bodb_HRM.dbo.Employee ape WITH (NOLOCK) ON ape.UserId = ap.UserId
 		LEFT JOIN bodb_HRM.dbo.Department d WITH(NOLOCK) ON d.DepartmentId = g.DepartmentId
 		LEFT JOIN bodb_HRM.dbo.Unit u WITH (NOLOCK) ON d.UnitId = u.UnitId
     WHERE EXISTS (
@@ -391,8 +391,8 @@ BEGIN
         LEFT JOIN dbo.Shift s2 WITH (NOLOCK) ON s2.Id = r.ToShift
         LEFT JOIN Shift s3 WITH (NOLOCK) ON s3.id = c.ShiftID
         LEFT JOIN dbo.LeaveType lv WITH (NOLOCK) ON lv.Id = r.LeaveTypeID
-        LEFT JOIN bodb_HRM_bk.dbo.CompanyEmployee ap WITH (NOLOCK) ON ap.EmpId = r.ProcessedBy
-        LEFT JOIN bodb_HRM_bk.dbo.Employee ape WITH (NOLOCK) ON ape.UserId = ap.UserId
+        LEFT JOIN bodb_HRM.dbo.CompanyEmployee ap WITH (NOLOCK) ON ap.EmpId = r.ProcessedBy
+        LEFT JOIN bodb_HRM.dbo.Employee ape WITH (NOLOCK) ON ape.UserId = ap.UserId
 		LEFT JOIN bodb_HRM.dbo.Department d WITH(NOLOCK) ON d.DepartmentId = g.DepartmentId
 		LEFT JOIN bodb_HRM.dbo.Unit u WITH (NOLOCK) ON d.UnitId = u.UnitId
     WHERE @IsManagement = 1
@@ -550,8 +550,8 @@ BEGIN
         LEFT JOIN dbo.Shift s2 WITH (NOLOCK) ON s2.Id = r.ToShift
         LEFT JOIN Shift s3 WITH (NOLOCK) ON s3.id = c.ShiftID
         LEFT JOIN dbo.LeaveType lv WITH (NOLOCK) ON lv.Id = r.LeaveTypeID
-        LEFT JOIN bodb_HRM_bk.dbo.CompanyEmployee ap WITH (NOLOCK) ON ap.EmpId = r.ProcessedBy
-        LEFT JOIN bodb_HRM_bk.dbo.Employee ape WITH (NOLOCK) ON ape.UserId = ap.UserId
+        LEFT JOIN bodb_HRM.dbo.CompanyEmployee ap WITH (NOLOCK) ON ap.EmpId = r.ProcessedBy
+        LEFT JOIN bodb_HRM.dbo.Employee ape WITH (NOLOCK) ON ape.UserId = ap.UserId
 		LEFT JOIN bodb_HRM.dbo.Department d WITH(NOLOCK) ON d.DepartmentId = g.DepartmentId
 		LEFT JOIN bodb_HRM.dbo.Unit u WITH (NOLOCK) ON d.UnitId = u.UnitId
     WHERE @IsLeaderOfStandByTeam = 1

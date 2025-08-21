@@ -1,3 +1,5 @@
+/*<info serverAlias="HRM-NexHRM,HRM-LumiHRM,HRM-NexVisionHRM" executers="wsv_hrm" isFunction="0"></info>*/
+
 CREATE OR ALTER   PROCEDURE [dbo].[Nex_WorkingTimeRequest_Get]
 (
     @SupervisorId INT = NULL
@@ -84,7 +86,7 @@ BEGIN
 			INNER JOIN NexHRM.dbo.Employee e ON wtr.EmpId = e.Id
 			INNER JOIN NexHRM.dbo.EmployeeGroup eg ON eg.Id = e.GroupId
 			LEFT JOIN NEXHRM.dbo.LeaveType lt ON lt.Id = wtr.LeaveTypeID
-			INNER JOIN bodb_HRM_bk.dbo.CompanyEmployee ape ON ape.EmpId = eg.LeaderId
+			INNER JOIN bodb_HRM.dbo.CompanyEmployee ape ON ape.EmpId = eg.LeaderId
 			INNER JOIN bodb_HRM.dbo.Department d ON d.DepartmentId = eg.DepartmentId
 			INNER JOIN bodb_HRM.dbo.Unit u ON u.UnitId = d.UnitId
 		WHERE 
@@ -156,7 +158,7 @@ BEGIN
 			INNER JOIN LumiHRM.dbo.Employee e ON wtr.EmpId = e.Id
 			INNER JOIN LumiHRM.dbo.EmployeeGroup eg ON eg.Id = e.GroupId
 			LEFT JOIN LumiHRM.dbo.LeaveType lt ON lt.Id = wtr.LeaveTypeID
-			INNER JOIN bodb_HRM_bk.dbo.CompanyEmployee ape ON ape.EmpId = eg.LeaderId
+			INNER JOIN bodb_HRM.dbo.CompanyEmployee ape ON ape.EmpId = eg.LeaderId
 			INNER JOIN bodb_HRM.dbo.Department d ON d.DepartmentId = eg.DepartmentId
 			INNER JOIN bodb_HRM.dbo.Unit u ON u.UnitId = d.UnitId
 		WHERE 
@@ -228,7 +230,7 @@ BEGIN
 			INNER JOIN NexVisionHRM.dbo.Employee e ON wtr.EmpId = e.Id
 			INNER JOIN NexVisionHRM.dbo.EmployeeGroup eg ON eg.Id = e.GroupId
 			LEFT JOIN NexVisionHRM.dbo.LeaveType lt ON lt.Id = wtr.LeaveTypeID
-			INNER JOIN bodb_HRM_bk.dbo.CompanyEmployee ape ON ape.EmpId = eg.LeaderId
+			INNER JOIN bodb_HRM.dbo.CompanyEmployee ape ON ape.EmpId = eg.LeaderId
 			INNER JOIN bodb_HRM.dbo.Department d ON d.DepartmentId = eg.DepartmentId
 			INNER JOIN bodb_HRM.dbo.Unit u ON u.UnitId = d.UnitId
 		WHERE 

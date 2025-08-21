@@ -1,4 +1,5 @@
-﻿ALTER   PROCEDURE [dbo].[WorkingTimeRequest_GetRequestHistory]
+﻿/*<info serverAlias="HRM-NexHRM,HRM-LumiHRM,HRM-NexVisionHRM" executers="wsv_hrm" isFunction="0"></info>*/
+ALTER   PROCEDURE [dbo].[WorkingTimeRequest_GetRequestHistory]
     @requestid bigint
 AS
 /*
@@ -56,12 +57,12 @@ BEGIN
         INNER JOIN Employee e WITH (NOLOCK) ON e.ID = r.empID
         INNER JOIN dbo.EmployeeCalendar C WITH (NOLOCK) ON c.empid=r.empid and c.WorkDate = convert(VARCHAR(10),r.FromDate,111)
         LEFT JOIN Shift s WITH (NOLOCK) ON s.id = c.ShiftID
-        LEFT JOIN bodb_HRM_bk.dbo.CompanyEmployee ap WITH (NOLOCK) 
+        LEFT JOIN bodb_HRM.dbo.CompanyEmployee ap WITH (NOLOCK) 
         ON (
         (ap.EmpId = r.ProcessedBy AND r.ProcessedBy IS NOT NULL)
         OR (ap.EmpId = r.CreatedBy AND r.ProcessedBy IS NULL)
         )
-        LEFT JOIN bodb_HRM_bk.dbo.Employee ape WITH (NOLOCK) ON ape.UserId = ap.UserId
+        LEFT JOIN bodb_HRM.dbo.Employee ape WITH (NOLOCK) ON ape.UserId = ap.UserId
         LEFT JOIN dbo.Shift s1 WITH (NOLOCK) ON s1.Id= r.FromShift
         LEFT JOIN dbo.Shift s2 WITH (NOLOCK) ON s2.Id= r.ToShift
         LEFT JOIN dbo.LeaveType lv WITH (NOLOCK) ON lv.Id = r.LeaveTypeID

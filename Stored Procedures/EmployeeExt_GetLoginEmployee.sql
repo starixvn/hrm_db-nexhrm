@@ -1,4 +1,4 @@
-﻿
+﻿/*<info serverAlias="HRM-NexHRM,HRM-LumiHRM,HRM-NexVisionHRM" executers="wsv_hrm" isFunction="0"></info>*/
 ALTER   PROCEDURE [dbo].[EmployeeExt_GetLoginEmployee] @DomainUsername VARCHAR(50)
 AS
 /*
@@ -17,7 +17,7 @@ BEGIN
 		e.Password, 
 		ce.IsDeleted, 
 		ce.Enabled
-    FROM bodb_HRM_bk.dbo.CompanyEmployee ce
-		INNER JOIN bodb_HRM_bk.dbo.Employee e ON e.UserId = ce.UserId
+    FROM bodb_HRM.dbo.CompanyEmployee ce
+		INNER JOIN bodb_HRM.dbo.Employee e ON e.UserId = ce.UserId
 	WHERE ce.DomainUsername = @DomainUsername
 END

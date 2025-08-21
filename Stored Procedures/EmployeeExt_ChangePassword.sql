@@ -1,4 +1,5 @@
-﻿
+﻿/*<info serverAlias="HRM-NexHRM,HRM-LumiHRM,HRM-NexVisionHRM" executers="wsv_hrm" isFunction="0"></info>*/
+
 ALTER   PROCEDURE [dbo].[EmployeeExt_ChangePassword] @Id INT
     ,@Password NVARCHAR(100)
     ,@ErrCode INT = 0 OUTPUT
@@ -18,7 +19,7 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    IF NOT EXISTS (SELECT 1 FROM bodb_HRM_bk.dbo.CompanyEmployee WHERE EmpId = @Id)
+    IF NOT EXISTS (SELECT 1 FROM bodb_HRM.dbo.CompanyEmployee WHERE EmpId = @Id)
     BEGIN
         SET @ErrCode = 1
         SET @ErrMsg = 'Employee not found'
@@ -27,8 +28,8 @@ BEGIN
 
     UPDATE e
     SET Password = @Password
-	FROM bodb_HRM_bk.dbo.Employee e
-		INNER JOIN bodb_HRM_bk.dbo.CompanyEmployee ce ON e.UserId = ce.UserId
+	FROM bodb_HRM.dbo.Employee e
+		INNER JOIN bodb_HRM.dbo.CompanyEmployee ce ON e.UserId = ce.UserId
     WHERE ce.EmpId = @Id
 END
 

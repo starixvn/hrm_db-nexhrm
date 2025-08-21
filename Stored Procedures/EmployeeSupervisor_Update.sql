@@ -1,4 +1,5 @@
-﻿ALTER   PROCEDURE [dbo].[EmployeeSupervisor_Update]
+﻿/*<info serverAlias="HRM-NexHRM,HRM-LumiHRM,HRM-NexVisionHRM" executers="wsv_hrm" isFunction="0"></info>*/
+ALTER   PROCEDURE [dbo].[EmployeeSupervisor_Update]
 	@EmpId INT
     ,@ApproverIds VARCHAR(255) = NULL
 	,@ModifiedBy INT
@@ -47,8 +48,8 @@ BEGIN
 	SET su.IsDeleted = 1
 		,su.ModifiedDate = @ModifiedDate
 		,su.ModifiedBy = @ModifiedBy
-	FROM [bodb_HRM_bk].[dbo].[EmployeeSupervisor] AS su WITH (ROWLOCK, UPDLOCK)
-	INNER JOIN [bodb_HRM_bk].[dbo].[CompanyEmployee] AS ce WITH (NOLOCK) ON ce.EmpId = su.OwnerId
+	FROM [bodb_HRM].[dbo].[EmployeeSupervisor] AS su WITH (ROWLOCK, UPDLOCK)
+	INNER JOIN [bodb_HRM].[dbo].[CompanyEmployee] AS ce WITH (NOLOCK) ON ce.EmpId = su.OwnerId
 	WHERE su.EmpId = @EmpId
 		AND su.ActionType = @ActionType
 		AND su.RequestType = @RequestType
@@ -66,8 +67,8 @@ BEGIN
 	SET su.IsDeleted = 0
 		,su.ModifiedDate = @ModifiedDate
 		,su.ModifiedBy = @ModifiedBy
-	FROM [bodb_HRM_bk].[dbo].[EmployeeSupervisor] AS su WITH (ROWLOCK, UPDLOCK)
-	INNER JOIN [bodb_HRM_bk].[dbo].[CompanyEmployee] AS ce WITH (NOLOCK) ON ce.EmpId = su.OwnerId
+	FROM [bodb_HRM].[dbo].[EmployeeSupervisor] AS su WITH (ROWLOCK, UPDLOCK)
+	INNER JOIN [bodb_HRM].[dbo].[CompanyEmployee] AS ce WITH (NOLOCK) ON ce.EmpId = su.OwnerId
 		INNER JOIN #tblSupervisor AS sp ON sp.ApproverId = su.OwnerId
 	WHERE su.EmpId = @EmpId
 		AND su.ActionType = @ActionType
@@ -77,11 +78,11 @@ BEGIN
 		AND ISNULL(ce.Enabled, 1) = 1
 		AND su.IsDeleted = 1
 
-	MERGE [bodb_HRM_bk].[dbo].[EmployeeSupervisor] AS [target]
+	MERGE [bodb_HRM].[dbo].[EmployeeSupervisor] AS [target]
 	USING (
 		SELECT sp.ApproverId
 		FROM #tblSupervisor AS sp
-		INNER JOIN [bodb_HRM_bk].[dbo].[CompanyEmployee] AS ce WITH (NOLOCK) ON ce.EmpId = sp.ApproverId
+		INNER JOIN [bodb_HRM].[dbo].[CompanyEmployee] AS ce WITH (NOLOCK) ON ce.EmpId = sp.ApproverId
 		WHERE ce.CompanyId = @CurrentCompanyId
 			AND ISNULL(ce.IsDeleted, 0) = 0
 			AND ISNULL(ce.Enabled, 1) = 1

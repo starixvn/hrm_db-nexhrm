@@ -1,4 +1,5 @@
-﻿ALTER   PROCEDURE [dbo].[GroupSupervisor_Update]
+﻿/*<info serverAlias="HRM-NexHRM,HRM-LumiHRM,HRM-NexVisionHRM" executers="wsv_hrm" isFunction="0"></info>*/
+ALTER   PROCEDURE [dbo].[GroupSupervisor_Update]
 	@GroupId INT
     ,@ApproverIds VARCHAR(255) = NULL
 	,@ModifiedBy INT
@@ -41,8 +42,8 @@ BEGIN
 	SET su.IsDeleted = 1
 		,su.ModifiedDate = @ModifiedDate
 		,su.ModifiedBy = @ModifiedBy
-	FROM bodb_HRM_bk.dbo.GroupSupervisor AS su WITH (ROWLOCK, UPDLOCK)
-	INNER JOIN bodb_HRM_bk.dbo.CompanyEmployee AS ce WITH (NOLOCK) ON ce.EmpId = su.OwnerId AND ISNULL(ce.IsSpecialUser, 0) = 0 AND ISNULL(ce.IsDeleted, 0) = 0 AND ISNULL(ce.Enabled, 1) = 1
+	FROM bodb_HRM.dbo.GroupSupervisor AS su WITH (ROWLOCK, UPDLOCK)
+	INNER JOIN bodb_HRM.dbo.CompanyEmployee AS ce WITH (NOLOCK) ON ce.EmpId = su.OwnerId AND ISNULL(ce.IsSpecialUser, 0) = 0 AND ISNULL(ce.IsDeleted, 0) = 0 AND ISNULL(ce.Enabled, 1) = 1
 	WHERE su.GroupId = @GroupId
 		AND ISNULL(su.IsDeleted, 0) = 0
 		AND ce.CompanyId = (SELECT [Value] FROM [NexHRM].[dbo].[SystemSetting] WITH (NOLOCK) WHERE [Name] = 'CompanyId')
@@ -56,14 +57,14 @@ BEGIN
 	SET su.IsDeleted = 0
 		,su.ModifiedDate = @ModifiedDate
 		,su.ModifiedBy = @ModifiedBy
-	FROM bodb_HRM_bk.dbo.GroupSupervisor AS su WITH (ROWLOCK, UPDLOCK)
+	FROM bodb_HRM.dbo.GroupSupervisor AS su WITH (ROWLOCK, UPDLOCK)
 		INNER JOIN #tblSupervisor AS sp ON sp.ApproverId = su.OwnerId
 	WHERE su.GroupId = @GroupId
 		AND su.ActionType = @ActionType
 		AND su.RequestType = @RequestType
 		AND su.IsDeleted = 1
 
-	MERGE bodb_HRM_bk.dbo.GroupSupervisor AS [target]
+	MERGE bodb_HRM.dbo.GroupSupervisor AS [target]
 	USING #tblSupervisor AS [source] ON (
 				[target].GroupId = @GroupId
 				AND [target].OwnerId = [source].ApproverId

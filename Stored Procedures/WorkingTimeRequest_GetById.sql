@@ -1,4 +1,6 @@
-﻿ALTER   PROCEDURE [dbo].[WorkingTimeRequest_GetById] 
+﻿/*<info serverAlias="HRM-NexHRM,HRM-LumiHRM,HRM-NexVisionHRM" executers="wsv_hrm" isFunction="0"></info>*/
+
+ALTER   PROCEDURE [dbo].[WorkingTimeRequest_GetById] 
     @id BIGINT
 AS
 /*
@@ -56,8 +58,8 @@ BEGIN
         ,@IsAllowUpdateStatus as IsAllowUpdateStatus
 		,r.IsCrossDate
     FROM dbo.WorkingTimeRequest r WITH (NOLOCK)
-        LEFT JOIN bodb_HRM_bk.dbo.CompanyEmployee ap WITH (NOLOCK) ON ap.EmpId = r.ProcessedBy
-		LEFT JOIN bodb_HRM_bk.dbo.Employee ape (NOLOCK) ON ap.UserId = ape.UserId
+        LEFT JOIN bodb_HRM.dbo.CompanyEmployee ap WITH (NOLOCK) ON ap.EmpId = r.ProcessedBy
+		LEFT JOIN bodb_HRM.dbo.Employee ape (NOLOCK) ON ap.UserId = ape.UserId
         JOIN dbo.EmployeeCalendar c WITH (NOLOCK) ON c.empid = r.empid
             AND c.WorkDate = convert(VARCHAR(10), r.FromDate, 111)
         LEFT JOIN dbo.Shift s1 WITH (NOLOCK) ON s1.Id = r.FromShift
