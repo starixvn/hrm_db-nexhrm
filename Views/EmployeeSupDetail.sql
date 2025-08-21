@@ -1,6 +1,6 @@
 ﻿
 
-CREATE   VIEW [dbo].[EmployeeSupDetail]
+ALTER   VIEW [dbo].[EmployeeSupDetail]
 AS
 SELECT 
     esup.EmpId, 
@@ -8,8 +8,8 @@ SELECT
     esup.FullName, 
     esup.ApproverId, 
     CASE 
-        WHEN c.Name IS NOT NULL THEN sup.NickName + ' (' + c.Name + ')'
-        ELSE sup.NickName
+        WHEN c.Name IS NOT NULL THEN ce.NickName + ' (' + c.Name + ')'
+        ELSE ce.NickName
     END AS ApproverNickName,
     sup.FullName AS ApproverFullName, 
     esup.IsPrivateSetting
@@ -44,9 +44,13 @@ FROM
             es.ApproverId IS NOT NULL
         )
 ) AS esup
-INNER JOIN bodb_HRM.dbo.Employee AS sup WITH (NOLOCK) ON esup.ApproverId = sup.EmpId AND ISNULL(sup.isDeleted, 0) = 0
-INNER JOIN bodb_HRM.dbo.CompanyEmployee AS ce WITH (NOLOCK) ON ce.EmpId = sup.EmpId AND ISNULL(ce.IsSpecialUser, 0) = 0 AND ISNULL(ce.IsDeleted, 0) = 0 AND ISNULL(ce.Enabled, 1) = 1
-LEFT JOIN bodb_HRM.dbo.Company AS c WITH (NOLOCK) ON c.CompanyId = ce.CompanyId AND c.CompanyId != (SELECT [Value] FROM [dbo].[SystemSetting] WHERE [Name] = 'CompanyId')
+INNER JOIN bodb_HRM_bk.dbo.CompanyEmployee AS ce WITH (NOLOCK) ON ce.EmpId = esup.ApproverId
+	AND ISNULL(ce.IsSpecialUser, 0) = 0 
+	AND ISNULL(ce.IsDeleted, 0) = 0 
+	AND ISNULL(ce.Enabled, 1) = 1
+INNER JOIN bodb_HRM_bk.dbo.Employee AS sup WITH (NOLOCK) ON ce.UserId = sup.UserId
+LEFT JOIN bodb_HRM_bk.dbo.Company AS c WITH (NOLOCK) ON c.CompanyId = ce.CompanyId 
+	AND c.CompanyId != (SELECT [Value] FROM [dbo].[SystemSetting] WHERE [Name] = 'CompanyId')
 GO
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPaneCount', @value = 1, @level0type = N'SCHEMA', @level0name = N'dbo', @level1type = N'VIEW', @level1name = N'EmployeeSupDetail';
 

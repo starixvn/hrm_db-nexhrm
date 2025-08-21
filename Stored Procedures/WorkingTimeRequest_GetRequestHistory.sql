@@ -1,5 +1,4 @@
-﻿
-CREATE   PROCEDURE [dbo].[WorkingTimeRequest_GetRequestHistory]
+﻿ALTER   PROCEDURE [dbo].[WorkingTimeRequest_GetRequestHistory]
     @requestid bigint
 AS
 /*
@@ -9,6 +8,7 @@ DB: NexHRM
 Original: 
 Revisions:  
     - 20250707@Henry.Dinh: Query to bodb_HRM.dbo.Employee.
+	- 20250821@Jay: restructure [Redmine: #235678]
 Param's Explanation:
 
 */
@@ -45,7 +45,7 @@ BEGIN
         END AS ProcessedBy,
         CASE
             WHEN r.ProcessedBy = -1 THEN 'System'
-            ELSE ap.FullName
+            ELSE ape.FullName
         END AS FullNameProcessedBy,
         '' AS EmailProcessedBy,
         ProcessedDate,
@@ -56,11 +56,12 @@ BEGIN
         INNER JOIN Employee e WITH (NOLOCK) ON e.ID = r.empID
         INNER JOIN dbo.EmployeeCalendar C WITH (NOLOCK) ON c.empid=r.empid and c.WorkDate = convert(VARCHAR(10),r.FromDate,111)
         LEFT JOIN Shift s WITH (NOLOCK) ON s.id = c.ShiftID
-        LEFT JOIN bodb_HRM.dbo.Employee ap WITH (NOLOCK) 
+        LEFT JOIN bodb_HRM_bk.dbo.CompanyEmployee ap WITH (NOLOCK) 
         ON (
         (ap.EmpId = r.ProcessedBy AND r.ProcessedBy IS NOT NULL)
         OR (ap.EmpId = r.CreatedBy AND r.ProcessedBy IS NULL)
         )
+        LEFT JOIN bodb_HRM_bk.dbo.Employee ape WITH (NOLOCK) ON ape.UserId = ap.UserId
         LEFT JOIN dbo.Shift s1 WITH (NOLOCK) ON s1.Id= r.FromShift
         LEFT JOIN dbo.Shift s2 WITH (NOLOCK) ON s2.Id= r.ToShift
         LEFT JOIN dbo.LeaveType lv WITH (NOLOCK) ON lv.Id = r.LeaveTypeID
@@ -68,3 +69,4 @@ BEGIN
     WHERE r.Id = @requestid
     ORDER BY keyid
 END
+

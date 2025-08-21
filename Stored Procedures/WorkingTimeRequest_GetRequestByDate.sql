@@ -1,5 +1,5 @@
 ﻿
-CREATE   PROCEDURE [dbo].[WorkingTimeRequest_GetRequestByDate] @role INT
+ALTER   PROCEDURE [dbo].[WorkingTimeRequest_GetRequestByDate] @role INT
     ,@fromdate DATETIME
     ,@todate DATETIME
     ,@empid INT = NULL
@@ -23,6 +23,7 @@ Original:
 Revisions:    
 	- 20250327@Henry: Update MGT Code -> MGT/COR code
     - 20250707@Henry.Dinh: Query to bodb_HRM.dbo.Employee.
+	- 20250821@Jay: restructure [Redmine: #235678]
 Param's Explanation:
 
 */
@@ -145,7 +146,7 @@ BEGIN
         END AS ProcessedBy
         ,CASE
             WHEN r.ProcessedBy = -1 THEN 'System'
-            ELSE ap.FullName
+            ELSE ape.FullName
         END AS FullNameProcessedBy
         ,ap.Email AS EmailProcessedBy
         ,r.ProcessedDate
@@ -236,7 +237,8 @@ BEGIN
         LEFT JOIN dbo.Shift s2 WITH (NOLOCK) ON s2.Id = r.ToShift
         LEFT JOIN dbo.Shift s3 WITH (NOLOCK) ON s3.id = c.ShiftID
         LEFT JOIN dbo.LeaveType lv WITH (NOLOCK) ON lv.Id = r.LeaveTypeID
-        LEFT JOIN bodb_HRM.dbo.Employee ap WITH (NOLOCK) ON ap.EmpId = r.ProcessedBy
+        LEFT JOIN bodb_HRM_bk.dbo.CompanyEmployee ap WITH (NOLOCK) ON ap.EmpId = r.ProcessedBy
+        LEFT JOIN bodb_HRM_bk.dbo.Employee ape WITH (NOLOCK) ON ape.UserId = ap.UserId
 		LEFT JOIN bodb_HRM.dbo.Department d WITH(NOLOCK) ON d.DepartmentId = g.DepartmentId
 		LEFT JOIN bodb_HRM.dbo.Unit u WITH (NOLOCK) ON d.UnitId = u.UnitId
     WHERE EXISTS (
@@ -319,7 +321,7 @@ BEGIN
         END AS ProcessedBy
         ,CASE
             WHEN r.ProcessedBy = -1 THEN 'System'
-            ELSE ap.FullName
+            ELSE ape.FullName
         END AS FullNameProcessedBy
         ,ap.Email AS EmailProcessedBy
         ,r.ProcessedDate
@@ -389,7 +391,8 @@ BEGIN
         LEFT JOIN dbo.Shift s2 WITH (NOLOCK) ON s2.Id = r.ToShift
         LEFT JOIN Shift s3 WITH (NOLOCK) ON s3.id = c.ShiftID
         LEFT JOIN dbo.LeaveType lv WITH (NOLOCK) ON lv.Id = r.LeaveTypeID
-        LEFT JOIN bodb_HRM.dbo.Employee ap WITH (NOLOCK) ON ap.EmpId = r.ProcessedBy
+        LEFT JOIN bodb_HRM_bk.dbo.CompanyEmployee ap WITH (NOLOCK) ON ap.EmpId = r.ProcessedBy
+        LEFT JOIN bodb_HRM_bk.dbo.Employee ape WITH (NOLOCK) ON ape.UserId = ap.UserId
 		LEFT JOIN bodb_HRM.dbo.Department d WITH(NOLOCK) ON d.DepartmentId = g.DepartmentId
 		LEFT JOIN bodb_HRM.dbo.Unit u WITH (NOLOCK) ON d.UnitId = u.UnitId
     WHERE @IsManagement = 1
@@ -477,7 +480,7 @@ BEGIN
         END AS ProcessedBy
         ,CASE
             WHEN r.ProcessedBy = -1 THEN 'System'
-            ELSE ap.FullName
+            ELSE ape.FullName
         END AS FullNameProcessedBy
         ,ap.Email AS EmailProcessedBy
         ,r.ProcessedDate
@@ -547,7 +550,8 @@ BEGIN
         LEFT JOIN dbo.Shift s2 WITH (NOLOCK) ON s2.Id = r.ToShift
         LEFT JOIN Shift s3 WITH (NOLOCK) ON s3.id = c.ShiftID
         LEFT JOIN dbo.LeaveType lv WITH (NOLOCK) ON lv.Id = r.LeaveTypeID
-        LEFT JOIN bodb_HRM.dbo.Employee ap WITH (NOLOCK) ON ap.EmpId = r.ProcessedBy
+        LEFT JOIN bodb_HRM_bk.dbo.CompanyEmployee ap WITH (NOLOCK) ON ap.EmpId = r.ProcessedBy
+        LEFT JOIN bodb_HRM_bk.dbo.Employee ape WITH (NOLOCK) ON ape.UserId = ap.UserId
 		LEFT JOIN bodb_HRM.dbo.Department d WITH(NOLOCK) ON d.DepartmentId = g.DepartmentId
 		LEFT JOIN bodb_HRM.dbo.Unit u WITH (NOLOCK) ON d.UnitId = u.UnitId
     WHERE @IsLeaderOfStandByTeam = 1

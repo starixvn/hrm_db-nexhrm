@@ -1,5 +1,4 @@
-﻿
-CREATE   PROCEDURE [dbo].[WorkingTimeRequest_GetById] 
+﻿ALTER   PROCEDURE [dbo].[WorkingTimeRequest_GetById] 
     @id BIGINT
 AS
 /*
@@ -10,6 +9,7 @@ Original:
 
 Revisions:  
     - 20250707@Henry.Dinh: Query to bodb_HRM.dbo.Employee.
+	- 20250821@Jay: restructure [Redmine: #235678]
 Param's Explanation:
 
 */
@@ -33,7 +33,7 @@ BEGIN
         END AS ProcessedBy
         ,CASE
             WHEN r.ProcessedBy = -1 THEN 'System'
-            ELSE ap.FullName
+            ELSE ape.FullName
         END AS FullNameProcessedBy
         ,ap.Email AS EmailProcessedBy
         ,ProcessedDate
@@ -56,7 +56,8 @@ BEGIN
         ,@IsAllowUpdateStatus as IsAllowUpdateStatus
 		,r.IsCrossDate
     FROM dbo.WorkingTimeRequest r WITH (NOLOCK)
-        LEFT JOIN bodb_HRM.dbo.Employee ap WITH (NOLOCK) ON ap.EmpId = r.ProcessedBy
+        LEFT JOIN bodb_HRM_bk.dbo.CompanyEmployee ap WITH (NOLOCK) ON ap.EmpId = r.ProcessedBy
+		LEFT JOIN bodb_HRM_bk.dbo.Employee ape (NOLOCK) ON ap.UserId = ape.UserId
         JOIN dbo.EmployeeCalendar c WITH (NOLOCK) ON c.empid = r.empid
             AND c.WorkDate = convert(VARCHAR(10), r.FromDate, 111)
         LEFT JOIN dbo.Shift s1 WITH (NOLOCK) ON s1.Id = r.FromShift
@@ -67,3 +68,4 @@ BEGIN
         LEFT JOIN EmployeeGroup g WITH (NOLOCK) ON e.GroupID = g.ID
     WHERE r.id = @id
 END
+
