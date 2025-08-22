@@ -1,25 +1,23 @@
-﻿
-/****** Object:  Stored Procedure dbo.EmployeeCalendar_Get    Script Date: 3/13/2016 3:21:40 PM ******/
-
+﻿/*<info serverAlias="HRM-NexHRM,HRM-LumiHRM,HRM-NexVisionHRM" executers="wsv_hrm" isFunction="0"></info>*/
 ALTER PROCEDURE [dbo].[EmployeeCalendar_Get] -- '2022-01-04 11:20:25.000'
     @FromDate DATETIME = NULL
 AS
 /*
-Created: 20141002@Quinn.Vo
-Task: Get employee calendar from change date
-DB: NexEPA
-Original: 
+    Created: 20141002@Quinn.Vo
+    Task: Get employee calendar from change date
+    DB: NexEPA
+    Original: 
 
-Revisions:  
-Param's Explanation:
-
+    Revisions:  
+        - 20251208@Henry.Dinh: migrate data transfer feature id: #233310 
+    Param's Explanation:
 */
 BEGIN
     SET NOCOUNT ON;
 
     SELECT 
       cl.[WorkDate]
-      ,ISNULL(e.OldId, e.Id) AS UserId
+      ,e.Id AS UserId
       ,CASE WHEN ISNULL(IsWorkFromHome, 0) = 1 THEN NULL ELSE [ShiftId] END [ShiftId]
 	  --,[ShiftId]
       ,cl.[IsHoliday]

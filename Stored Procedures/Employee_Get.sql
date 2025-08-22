@@ -1,20 +1,21 @@
-﻿
+﻿/*<info serverAlias="HRM-NexHRM,HRM-LumiHRM,HRM-NexVisionHRM" executers="wsv_hrm" isFunction="0"></info>*/
 ALTER PROCEDURE [dbo].[Employee_Get] @FromDate DATETIME = NULL
 AS
 /*
-Created: 20140320@Quinn.Vo
-Task: Get all employee from change date
-DB: NexEPA
-Original: 
+    Created: 20140320@Quinn.Vo
+    Task: Get all employee from change date
+    DB: NexEPA
+    Original: 
 
-Revisions:  
-Param's Explanation:
+    Revisions:  
+        - 20251208@Henry.Dinh: migrate data transfer feature id: #233310 
+    Param's Explanation:
 
 */
 BEGIN
     SET NOCOUNT ON;
 
-    SELECT ISNULL(e.OldId, e.Id) AS EmpId
+    SELECT e.Id AS EmpId
         ,'' AS [Password]
         ,e.Code
         ,e.NickName
