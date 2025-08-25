@@ -33,7 +33,7 @@ BEGIN
 		,@Nickname_exist = ce.Nickname
 	FROM bodb_HRM.dbo.Employee AS e WITH (NOLOCK)
 		INNER JOIN bodb_HRM.dbo.CompanyEmployee AS ce WITH (NOLOCK) ON ce.UserId = e.UserId 
-	WHERE Code = @Code
+	WHERE ce.Code = @Code
 		AND ce.CompanyId = @CompanyId
 
 	IF ISNULL(@EmpId_exist, 0) <> 0
@@ -49,7 +49,7 @@ BEGIN
 		,@Nickname_exist = ce.Nickname
 	FROM bodb_HRM.dbo.Employee AS e WITH (NOLOCK)
 		INNER JOIN bodb_HRM.dbo.CompanyEmployee AS ce WITH (NOLOCK) ON ce.UserId = e.UserId 
-	WHERE NickName = @Nickname
+	WHERE ce.NickName = @Nickname
 		AND ce.CompanyId = @CompanyId
 		AND (
 			ce.isDeleted = 0
