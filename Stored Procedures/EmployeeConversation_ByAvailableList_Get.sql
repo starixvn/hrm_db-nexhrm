@@ -1,5 +1,5 @@
-﻿
-CREATE     PROCEDURE [dbo].[EmployeeConversation_ByAvailableList_Get]
+﻿/*<info serverAlias="HRM-NexHRM,HRM-LumiHRM,HRM-NexVisionHRM" executers="wsv_hrm" isFunction="0"></info>*/
+ALTER PROCEDURE [dbo].[EmployeeConversation_ByAvailableList_Get]
 	@EmployeeJson NVARCHAR(MAX),
 	@OnDate DATETIME
 AS
@@ -42,7 +42,7 @@ BEGIN
 		@OnDate AS OnDate,
 		tec.CompanyId
 	FROM Employee e
-	INNER JOIN @TempEmployeeConversation tec ON e.OldId = tec.EmpId
+	INNER JOIN @TempEmployeeConversation tec ON e.Id = tec.EmpId
 	INNER JOIN EmployeeConversation ec ON ec.EmpId = e.Id
 	WHERE e.IsSpecialUser = 0 
 		AND e.isDeleted = 0

@@ -1,19 +1,20 @@
-﻿CREATE   PROCEDURE [dbo].[EmployeeConversation_Get]
+﻿/*<info serverAlias="HRM-NexHRM,HRM-LumiHRM,HRM-NexVisionHRM" executers="wsv_hrm" isFunction="0"></info>*/
+ALTER PROCEDURE [dbo].[EmployeeConversation_Get]
 AS
 /*
-Created: 20230404@Brian.nguyen
-Task: Get all conversation of employee
-DB: NexEPA
-Original: 
+	Created: 20230404@Brian.nguyen
+	Task: Get all conversation of employee
+	DB: NexEPA
+	Original: 
 
-Revisions:  
-Param's Explanation:
-
+	Revisions:  
+		20250827@Henry: restructure [Redmine: #235678]
+	Param's Explanation:
 */
 BEGIN
     SET NOCOUNT ON;
 
-	SELECT e.OldId AS Id
+	SELECT e.Id
         ,e.NickName 
 		,ec.ConversationId
     FROM dbo.Employee AS e WITH (NOLOCK)
