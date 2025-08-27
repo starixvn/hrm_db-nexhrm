@@ -17,6 +17,7 @@ ALTER PROCEDURE [dbo].[Employee_Insert]
     ,@sunShift INT = NULL
     ,@GroupId INT
     ,@createBy INT
+    ,@EmpId INT OUTPUT
     ,@ErrCode INT = 0 OUTPUT
     ,@ErrMsg VARCHAR(200) = '' OUTPUT
 )
@@ -36,7 +37,6 @@ BEGIN
 
 	DECLARE @CompanyId INT
         ,@OldEmpId INT
-        ,@NewEmpId INT
 
 	SELECT @CompanyId = [Value]
     FROM dbo.SystemSetting WITH (NOLOCK)
@@ -60,49 +60,32 @@ BEGIN
         RETURN
     END
 
-    SELECT @NewEmpId = MAX(EmpId)
+    SELECT @EmpId = MAX(EmpId)
     FROM bodb_HRM.dbo.CompanyEmployee WITH (NOLOCK)
 
-    SET @NewEmpId = ISNULL(@NewEmpId, 0) + 1
+    SET @EmpId = ISNULL(@EmpId, 0) + 1
 
     INSERT INTO bodb_HRM.dbo.Employee (UserId, FullName, DOB, [Password])
     VALUES (@UserId, @FullName, '1990-01-01', @Password)
 
-	INSERT INTO bodb_HRM.dbo.CompanyEmployee(CompanyId, EmpId, Code, DomainUsername, GroupId, [Enabled], IsDeleted, IsSpecialUser, CreatedDate, CreatedBy)
-	VALUES (@CompanyId, @NewEmpId, @Code, @DomainUsername, @GroupId, 1, 0, 0, GETDATE(), @createBy)
+	INSERT INTO bodb_HRM.dbo.CompanyEmployee (CompanyId, EmpId, Code, DomainUsername, GroupId, [Enabled], IsDeleted, IsSpecialUser, CreatedDate, CreatedBy)
+	VALUES (@CompanyId, @EmpId, @Code, @DomainUsername, @GroupId, 1, 0, 0, GETDATE(), @createBy)
 
-    INSERT INTO dbo.EmployeeShift (
-        [EmpId]
-        ,[MonShift]
-        ,[TueShift]
-        ,[WedShift]
-        ,[ThuShift]
-        ,[FriShift]
-        ,[SatShift]
-        ,[SunShift]
-        )
-    VALUES (
-        @UserId
-        ,@monShift
-        ,@tueShift
-        ,@wedShift
-        ,@thuShift
-        ,@friShift
-        ,@satShift
-        ,@sunShift
-        )
+    INSERT INTO dbo.EmployeeShift ([EmpId], [MonShift], [TueShift], [WedShift], [ThuShift], [FriShift], [SatShift], [SunShift])
+    VALUES (@EmpId, @monShift, @tueShift, @wedShift, @thuShift, @friShift, @satShift, @sunShift)
 
     INSERT INTO dbo.EmployeeGroup_Employee (GroupId, EmpId, isMainGroup)
-    VALUES (@groupId, @UserId, 1)
+    VALUES (@groupId, @EmpId, 1)
 
     DECLARE @fromdate DATETIME
         ,@todate DATETIME
 
     SET @fromdate = dbo.fnc_GetClientDateTime()
+
 	SELECT @todate = MAX(WorkDate)
     FROM dbo.EmployeeCalendar WITH (NOLOCK)
 
-    EXECUTE dbo.EmployeeCalendar_Insert @UserId
+    EXECUTE dbo.EmployeeCalendar_Insert @EmpId
         ,@fromdate
         ,@todate
 END
