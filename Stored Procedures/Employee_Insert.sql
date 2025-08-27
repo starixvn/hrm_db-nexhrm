@@ -68,8 +68,8 @@ BEGIN
     INSERT INTO bodb_HRM.dbo.Employee (UserId, FullName, DOB, [Password])
     VALUES (@UserId, @FullName, '1990-01-01', @Password)
 
-	INSERT INTO bodb_HRM.dbo.CompanyEmployee (CompanyId, EmpId, Code, DomainUsername, GroupId, [Enabled], IsDeleted, IsSpecialUser, CreatedDate, CreatedBy)
-	VALUES (@CompanyId, @EmpId, @Code, @DomainUsername, @GroupId, 1, 0, 0, GETDATE(), @createBy)
+	INSERT INTO bodb_HRM.dbo.CompanyEmployee (CompanyId, EmpId, UserId, Code, Nickname, DomainUsername, GroupId, [Enabled], IsDeleted, IsSpecialUser, CreatedDate, CreatedBy)
+	VALUES (@CompanyId, @EmpId, @UserId, @Code, @Nickname, @DomainUsername, @GroupId, 1, 0, 0, GETDATE(), @createBy)
 
     INSERT INTO dbo.EmployeeShift ([EmpId], [MonShift], [TueShift], [WedShift], [ThuShift], [FriShift], [SatShift], [SunShift])
     VALUES (@EmpId, @monShift, @tueShift, @wedShift, @thuShift, @friShift, @satShift, @sunShift)
