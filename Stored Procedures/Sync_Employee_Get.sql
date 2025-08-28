@@ -1,25 +1,24 @@
-﻿
-CREATE     PROCEDURE [dbo].[Sync_Employee_Get] @LastModifiedDate DATETIME
+﻿/*<info serverAlias="HRM-NexHRM,HRM-LumiHRM,HRM-NexVisionHRM" executers="wsv_hrm" isFunction="0"></info>*/
+ALTER PROCEDURE [dbo].[Sync_Employee_Get] @LastModifiedDate DATETIME
 AS
 /*
-Created: Jay.Do@20250610
-Task: Get employee by last modified date
-DB: NexHR
-Original: 
-
-Revisions:    
-Param's Explanation:
-
+	Created: Jay.Do@20250610
+	Task: Get employee by last modified date
+	DB: NexHR
+	Original: 
+	Revisions:    
+		- 20251208@Henry.Dinh: migrate data transfer feature id: #233310 
+	Param's Explanation:
 */
 BEGIN
     SET NOCOUNT ON
 	
-	SELECT ISNULL(e.OldId, e.Id) AS EmployeeId, 
+	SELECT e.Id AS EmployeeId, 
 		e.DomainUsername, 
 		e.Code, 
 		e.FullName, 
 		e.NickName, 
-		ISNULL(eg.OldId, e.GroupId) AS GroupId, 
+		e.GroupId, 
 		e.[Enabled], 
 		e.isDeleted, 
 		CAST(e.JoinedDate AS DATE) AS JoinedDate, 
@@ -30,7 +29,6 @@ BEGIN
 		ec.ConversationId,
 		e.ModifiedDate
 	FROM dbo.Employee AS e WITH (NOLOCK) 
-	INNER JOIN dbo.EmployeeGroup AS eg WITH (NOLOCK) ON e.GroupId = eg.Id
 	LEFT OUTER JOIN dbo.EmployeeConversation AS ec WITH (NOLOCK) ON e.Id = ec.EmpId
 	WHERE e.ModifiedDate > @LastModifiedDate
 END

@@ -1,21 +1,20 @@
-﻿
-CREATE    PROCEDURE [dbo].[Sync_EmployeeCalendar_Get] @LastModifiedDate DATETIME
+﻿/*<info serverAlias="HRM-NexHRM,HRM-LumiHRM,HRM-NexVisionHRM" executers="wsv_hrm" isFunction="0"></info>*/
+ALTER PROCEDURE [dbo].[Sync_EmployeeCalendar_Get] @LastModifiedDate DATETIME
 AS
 /*
-Created: Jay.Do@20250610
-Task: Get employee calendar
-DB: NexHR
-Original: 
-
-Revisions:    
-Param's Explanation:
-
+	Created: Jay.Do@20250610
+	Task: Get employee calendar
+	DB: NexHR
+	Original: 
+	Revisions:    
+		- 20251208@Henry.Dinh: migrate data transfer feature id: #233310 
+	Param's Explanation:
 */
 BEGIN
     SET NOCOUNT ON
 	
 	SELECT cl.Id,
-		ISNULL(e.OldId, e.Id) AS EmpId, 
+		e.Id AS EmpId, 
 		cl.WorkDate, 
 		cl.IsOffDay, 
 		cl.IsHoliday,

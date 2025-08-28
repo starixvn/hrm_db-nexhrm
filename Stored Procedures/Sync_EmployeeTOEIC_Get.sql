@@ -1,20 +1,19 @@
-﻿
-CREATE   PROCEDURE [dbo].[Sync_EmployeeTOEIC_Get] @LastModifiedDate DATETIME
+﻿/*<info serverAlias="HRM-NexHRM,HRM-LumiHRM,HRM-NexVisionHRM" executers="wsv_hrm" isFunction="0"></info>*/
+ALTER PROCEDURE [dbo].[Sync_EmployeeTOEIC_Get] @LastModifiedDate DATETIME
 AS
 /*
-Created: Jay.Do@20250610
-Task: Get employee toeic by last modified date
-DB: NexHR
-Original: 
-
-Revisions:    
-Param's Explanation:
-
+	Created: Jay.Do@20250610
+	Task: Get employee toeic by last modified date
+	DB: NexHR
+	Original: 
+	Revisions:    
+		- 20251208@Henry.Dinh: migrate data transfer feature id: #233310 
+	Param's Explanation:
 */
 BEGIN
     SET NOCOUNT ON
 	
-	SELECT ISNULL(e.OldId, e.Id) AS EmpId, 
+	SELECT e.Id AS EmpId, 
 		toeic.MinimumScore, 
 		CAST(toeic.InputDate AS DATE) AS InputDate, 
 		CAST(toeic.LRExamDate AS DATE) AS LRExamDate, 

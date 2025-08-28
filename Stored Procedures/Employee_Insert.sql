@@ -1,13 +1,13 @@
-﻿
+﻿/*<info serverAlias="HRM-NexHRM,HRM-LumiHRM,HRM-NexVisionHRM" executers="wsv_hrm" isFunction="0"></info>*/
 
-CREATE PROCEDURE [dbo].[Employee_Insert]
+ALTER PROCEDURE [dbo].[Employee_Insert]
 (
     @UserId INT
     ,@FullName NVARCHAR(50)
     ,@Nickname NVARCHAR(20)
     ,@DomainUsername VARCHAR(50)
-    ,@code VARCHAR(20)
-    ,@password NVARCHAR(100)
+    ,@Code VARCHAR(20)
+    ,@Password NVARCHAR(100)
     ,@monShift INT = NULL
     ,@tueShift INT = NULL
     ,@wedShift INT = NULL
@@ -17,6 +17,7 @@ CREATE PROCEDURE [dbo].[Employee_Insert]
     ,@sunShift INT = NULL
     ,@GroupId INT
     ,@createBy INT
+    ,@EmpId INT OUTPUT
     ,@ErrCode INT = 0 OUTPUT
     ,@ErrMsg VARCHAR(200) = '' OUTPUT
 )
@@ -27,7 +28,8 @@ AS
     DB: NexHRM
 
     Revisions:    
-        20250507@Henry.Dinh: insert password
+        20250507@Henry: insert password
+        20250819@Tim: restructure [Redmine: #235678]
     Param's Explanation:
 */
 BEGIN
@@ -40,10 +42,9 @@ BEGIN
     FROM dbo.SystemSetting WITH (NOLOCK)
     WHERE [Name] = 'CompanyId'
 
-    SELECT @OldEmpId = MAX(e.OldEmpId)
-    FROM bodb_HRM.dbo.Employee AS e WITH (NOLOCK)
-        INNER JOIN bodb_HRM.dbo.CompanyEmployee AS c WITH (NOLOCK) ON e.EmpId = c.EmpId
-    WHERE c.CompanyId = @CompanyId
+    SELECT @OldEmpId = MAX(OldEmpId)
+    FROM bodb_HRM.dbo.CompanyEmployee WITH (NOLOCK)
+    WHERE CompanyId = @CompanyId
 
     SET @OldEmpId = ISNULL(@OldEmpId, 0) + 1
 
@@ -59,67 +60,32 @@ BEGIN
         RETURN
     END
 
-    INSERT INTO bodb_HRM.dbo.Employee (
-        Code
-        ,FullName
-        ,Nickname
-        ,DOB
-        ,CreatedDate
-        ,CreatedBy
-        ,OldEmpId
-		,EmpId
-		,[Enabled]
-        )
-    VALUES (
-        @Code
-        ,@FullName
-        ,@NickName
-        ,CAST('1-1-1990' AS SMALLDATETIME)
-        ,dbo.fnc_GetClientDateTime()
-        ,@createBy
-        ,@OldEmpId
-		,@UserId
-		,1
-        )
+    SELECT @EmpId = MAX(EmpId)
+    FROM bodb_HRM.dbo.CompanyEmployee WITH (NOLOCK)
 
-	INSERT INTO bodb_HRM.dbo.CompanyEmployee(CompanyId, EmpId, DomainUsername, [Password], GroupId, [Enabled], IsDeleted, IsSpecialUser)
-	VALUES (@CompanyId, @UserId, @DomainUsername, @Password, @GroupId, 0, 0, 0)
+    SET @EmpId = ISNULL(@EmpId, 0) + 1
 
-    INSERT INTO dbo.EmployeeShift (
-        [EmpId]
-        ,[MonShift]
-        ,[TueShift]
-        ,[WedShift]
-        ,[ThuShift]
-        ,[FriShift]
-        ,[SatShift]
-        ,[SunShift]
-        )
-    VALUES (
-        @UserId
-        ,@monShift
-        ,@tueShift
-        ,@wedShift
-        ,@thuShift
-        ,@friShift
-        ,@satShift
-        ,@sunShift
-        )
+    INSERT INTO bodb_HRM.dbo.Employee (UserId, FullName, DOB, [Password])
+    VALUES (@UserId, @FullName, '1990-01-01', @Password)
+
+	INSERT INTO bodb_HRM.dbo.CompanyEmployee (CompanyId, EmpId, UserId, Code, Nickname, DomainUsername, GroupId, [Enabled], IsDeleted, IsSpecialUser, CreatedDate, CreatedBy)
+	VALUES (@CompanyId, @EmpId, @UserId, @Code, @Nickname, @DomainUsername, @GroupId, 1, 0, 0, GETDATE(), @createBy)
+
+    INSERT INTO dbo.EmployeeShift ([EmpId], [MonShift], [TueShift], [WedShift], [ThuShift], [FriShift], [SatShift], [SunShift])
+    VALUES (@EmpId, @monShift, @tueShift, @wedShift, @thuShift, @friShift, @satShift, @sunShift)
 
     INSERT INTO dbo.EmployeeGroup_Employee (GroupId, EmpId, isMainGroup)
-    VALUES (@groupId, @UserId, 1)
+    VALUES (@groupId, @EmpId, 1)
 
     DECLARE @fromdate DATETIME
         ,@todate DATETIME
 
     SET @fromdate = dbo.fnc_GetClientDateTime()
+
 	SELECT @todate = MAX(WorkDate)
     FROM dbo.EmployeeCalendar WITH (NOLOCK)
 
-    EXECUTE dbo.EmployeeCalendar_Insert @UserId
+    EXECUTE dbo.EmployeeCalendar_Insert @EmpId
         ,@fromdate
         ,@todate
-
-    SELECT @ErrCode = 0
-        ,@ErrMsg = ''
 END

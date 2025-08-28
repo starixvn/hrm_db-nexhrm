@@ -1,12 +1,12 @@
 ﻿
-CREATE   VIEW [dbo].[Employee]
+ALTER   VIEW [dbo].[Employee]
 AS
 
-SELECT e.EmpId as Id, e.OldEmpId as OldId, e.Code, ec.DomainUsername, e.FullName, (CASE WHEN ec.NickName2 IS NULL THEN e.NickName ELSE ec.NickName2 END) AS NickName
-    ,e.DOB, ec.Email, e.JobTitleId, ec.[Enabled], e.Phone, e.Gender, ec.GroupId, ec.Roles
-    ,ec.CompanyDate as JoinedDate, ec.ConfirmedDate, ec.ResignedDate, e.Skype, e.Yahoo, e.Marriage
-    ,e.CreatedDate, e.CreatedBy, e.ModifiedDate, e.ModifiedBy, ec.IsDeleted, e.PermanentAddress, e.CurrentAddress, e.IdCardNumber, e.PassportNo
-    ,e.PassportExp, e.GeoMapLatitude, e.GeoMapLongtitude, e.DistanceToCompany, e.EmployeeCard, e.DateOfIDCard as IssuedDate, e.PlaceOfIDCard as IssuedPlace, ec.IsSpecialUser, e.JoinedDate as GroupDate
+SELECT ec.EmpId as Id, e.OldEmpId as OldId, ec.Code, ec.DomainUsername, e.FullName, (CASE WHEN ec.NickName2 IS NULL THEN ec.NickName ELSE ec.NickName2 END) AS NickName
+    ,e.DOB, ec.Email, ec.JobTitleId, ec.[Enabled], e.Phone, e.Gender, ec.GroupId, ec.Roles
+    ,ec.CompanyDate as JoinedDate, e.ConfirmedDate, e.ResignedDate, e.Skype, e.Yahoo, e.Marriage
+    ,ec.CreatedDate, ec.CreatedBy, ec.ModifiedDate, ec.ModifiedBy, ec.IsDeleted, e.PermanentAddress, e.CurrentAddress, e.IdCardNumber, e.PassportNo
+    ,e.PassportExp, e.GeoMapLatitude, e.GeoMapLongtitude, ec.DistanceToCompany, ec.EmployeeCard, e.DateOfIDCard as IssuedDate, e.PlaceOfIDCard as IssuedPlace, ec.IsSpecialUser, e.JoinedDate as GroupDate
     ,e.PlaceOfBirth, e.ContactName, e.UserRelationship, e.ContactPhone
     ,e.ContactAddress, e.EducationBackground, e.Telegram, e.SocialInsuranceNo, ec.CompanyId, ec.SalaryGroupId, ec.AutoApproveRequest
 FROM bodb_HRM.dbo.Employee AS e WITH (NOLOCK)

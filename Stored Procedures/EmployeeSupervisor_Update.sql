@@ -1,5 +1,5 @@
-﻿
-CREATE   PROCEDURE [dbo].[EmployeeSupervisor_Update]
+﻿/*<info serverAlias="HRM-NexHRM,HRM-LumiHRM,HRM-NexVisionHRM" executers="wsv_hrm" isFunction="0"></info>*/
+ALTER   PROCEDURE [dbo].[EmployeeSupervisor_Update]
 	@EmpId INT
     ,@ApproverIds VARCHAR(255) = NULL
 	,@ModifiedBy INT
@@ -14,6 +14,7 @@ Original:
 
 Revisions:  
     20250722@Henry: Updated to work with new table structure in bodb_HRM.dbo.EmployeeSupervisor
+    20250819@Jay: restructure [Redmine: #235678]
 Param's Explanation:
 
 */

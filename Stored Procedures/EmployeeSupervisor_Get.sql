@@ -1,5 +1,5 @@
-﻿
-CREATE   PROCEDURE [dbo].[EmployeeSupervisor_Get]
+﻿/*<info serverAlias="HRM-NexHRM,HRM-LumiHRM,HRM-NexVisionHRM" executers="wsv_hrm" isFunction="0"></info>*/
+ALTER   PROCEDURE [dbo].[EmployeeSupervisor_Get]
 AS
 /*
 Created: 20240426@Lilac.Nguyen
@@ -8,6 +8,7 @@ DB: NexHRM
 Original: 
 
 Revisions:  
+        20250819@Jay: restructure [Redmine: #235678]
 Param's Explanation:
 
 */
@@ -19,7 +20,7 @@ BEGIN
 			em.NickName,
 			em.FullName,
 			STRING_AGG(
-				e.NickName + 
+				ce.NickName + 
 				CASE 
 					WHEN es.OuterCompanyName IS NOT NULL THEN ' (' + es.OuterCompanyName + ')'
 					ELSE ''
@@ -28,7 +29,7 @@ BEGIN
 			) AS Approvers
         FROM dbo.EmployeeSupervisor AS es WITH (NOLOCK)
 			LEFT JOIN dbo.Employee AS em WITH (NOLOCK) ON em.Id = es.EmpId
-			LEFT JOIN bodb_HRM.dbo.Employee AS e ON e.EmpId = es.ApproverId
+			LEFT JOIN bodb_HRM.dbo.CompanyEmployee AS ce ON ce.EmpId = es.ApproverId
         WHERE ISNULL(es.IsDeleted, 0) = 0
 		GROUP BY es.EmpId, em.NickName, em.FullName
 END

@@ -1,67 +1,51 @@
-﻿
-CREATE     PROCEDURE [dbo].[Employee_Delete] @employeeId INT
+﻿/*<info serverAlias="HRM-NexHRM,HRM-LumiHRM,HRM-NexVisionHRM" executers="wsv_hrm" isFunction="0"></info>*/
+
+ALTER PROCEDURE [dbo].[Employee_Delete]
+(
+    @employeeId INT
     ,@ResignedDate SMALLDATETIME
-	,@ModifiedBy INT = NULL
+    ,@ModifiedBy INT = NULL
     ,@ErrCode INT = 0 OUTPUT
     ,@ErrMsg VARCHAR(200) = '' OUTPUT
+)
 AS
 /*
-Created: 20160218@Quinn.Vo
-Task: Delete employee
-DB: NexHRM
-Original: 
+    Created: 20160218@Quinn.Vo
+    Task: Delete employee
+    DB: NexHRM
 
-Revisions:  
-Param's Explanation:
-
+    Revisions:
+        20250819@Tim: restructure [Redmine: #235678]
+    Param's Explanation:
 */
 BEGIN
     SET NOCOUNT ON
 
-    IF (@ResignedDate IS NULL)
+    IF @ResignedDate IS NULL
     BEGIN
         SELECT @ErrCode = 1
-            ,@ErrMsg = 'The user cannot be deleted without resigned date'
+            ,@ErrMsg = 'The user cannot be deleted without resigned date.'
 
         RETURN
     END
 
-    SET XACT_ABORT ON;
+    UPDATE bodb_HRM.dbo.CompanyEmployee WITH (ROWLOCK)
+    SET isDeleted = 1
+        ,ModifiedBy = @ModifiedBy
+        ,ModifiedDate = GETDATE()
+    WHERE EmpId = @employeeId
 
-    BEGIN TRY
-        BEGIN TRANSACTION;
-		
-		DECLARE @CompanyId int = (SELECT [Value] FROM dbo.SystemSetting WITH (NOLOCK) WHERE [Name] = 'CompanyId')
+	UPDATE e
+    SET e.ResignedDate = @ResignedDate
+    FROM bodb_HRM.dbo.Employee AS e WITH (ROWLOCK)
+        INNER JOIN bodb_HRM.dbo.CompanyEmployee AS ce WITH (NOLOCK) ON e.UserId = ce.UserId
+    WHERE ce.EmpId = @employeeId
 
-        UPDATE bodb_HRM.dbo.CompanyEmployee WITH (UPDLOCK, ROWLOCK)
-        SET ResignedDate = @ResignedDate
-            ,isDeleted = 1
-        WHERE EmpId = @employeeId
-		AND CompanyId = @CompanyId
+    DELETE dbo.EmployeeCalendar
+    WHERE WorkDate > @ResignedDate
+        AND empid = @employeeId
 
-		UPDATE bodb_HRM.dbo.Employee WITH (UPDLOCK, ROWLOCK)
-        SET ModifiedBy = @ModifiedBy
-            ,ModifiedDate = dbo.fnc_GetClientDateTime()
-        WHERE EmpId = @employeeId
-
-        DELETE dbo.EmployeeCalendar
-        WHERE WorkDate > @ResignedDate
-            AND empid = @employeeId;
-
-        DELETE dbo.EmployeeAttendance
-        WHERE AttendanceDate > @ResignedDate
-            AND empid = @employeeId
-
-        COMMIT TRANSACTION;
-
-        SELECT @ErrCode = 0
-            ,@ErrMsg = ''
-    END TRY
-
-    BEGIN CATCH
-        ROLLBACK TRANSACTION
-
-        SELECT @ErrCode = 1
-            ,@ErrMsg = N'Delete Employee unsuccessfully.'
-    END CATCH
+    DELETE dbo.EmployeeAttendance
+    WHERE AttendanceDate > @ResignedDate
+        AND empid = @employeeId
 END

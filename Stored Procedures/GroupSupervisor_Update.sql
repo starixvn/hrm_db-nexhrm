@@ -1,5 +1,5 @@
-﻿
-CREATE   PROCEDURE [dbo].[GroupSupervisor_Update]
+﻿/*<info serverAlias="HRM-NexHRM,HRM-LumiHRM,HRM-NexVisionHRM" executers="wsv_hrm" isFunction="0"></info>*/
+ALTER   PROCEDURE [dbo].[GroupSupervisor_Update]
 	@GroupId INT
     ,@ApproverIds VARCHAR(255) = NULL
 	,@ModifiedBy INT
@@ -13,6 +13,7 @@ DB: NexHRM
 Original: 
 
 Revisions:  
+        20250819@Jay: restructure [Redmine: #235678]
 Param's Explanation:
 
 */

@@ -1,35 +1,37 @@
-﻿
-CREATE   PROCEDURE [dbo].[Employee_Transfer] @EmployeeId INT
-	,@LastWorkingDate DATE
-	,@AffectedDate DATE
-	,@ToGroupId INT
-	,@ShiftId INT
-	,@IsTransferLateInEarlyOut BIT
-	,@IsTransferAnnualLeaveBalance BIT
-	,@IsTransferNexBalance BIT
-	,@IsSpecialUser BIT = 0
-	,@ModifiedBy INT = 0
-	,@ErrCode INT = 0 OUTPUT
+﻿/*<info serverAlias="HRM-NexHRM,HRM-LumiHRM,HRM-NexVisionHRM" executers="wsv_hrm" isFunction="0"></info>*/
+
+ALTER PROCEDURE [dbo].[Employee_Transfer]
+(
+    @EmployeeId INT
+    ,@LastWorkingDate DATE
+    ,@AffectedDate DATE
+    ,@ToGroupId INT
+    ,@ShiftId INT
+    ,@IsTransferLateInEarlyOut BIT
+    ,@IsTransferAnnualLeaveBalance BIT
+    ,@IsTransferNexBalance BIT
+    ,@IsSpecialUser BIT = 0
+    ,@ModifiedBy INT = 0
+    ,@ErrCode INT = 0 OUTPUT
     ,@ErrMsg VARCHAR(200) = '' OUTPUT
+)
 AS
 /*
-Created: 20210901@Quinn.Vo
-Task: transfer employee
-DB: NexHRM
-Original: 
+    Created: 20210901@Quinn.Vo
+    Task: transfer employee
+    DB: NexHRM
 
-Revisions:
-     - 20250620@Henry: migrate to bodb_HRM
-     - 20250717@Henry: Added transaction support for data integrity + clear old data
-Param's Explanation:
-
+    Revisions:
+         20250620@Henry: migrate to bodb_HRM
+         20250717@Henry: Added transaction support for data integrity + clear old data
+        20250819@Tim: restructure [Redmine: #235678]
+    Param's Explanation:
 */
 BEGIN
     SET NOCOUNT ON;
-    SET XACT_ABORT ON;
 
     BEGIN TRY
-        BEGIN TRANSACTION;
+    BEGIN TRANSACTION;
 
 	DECLARE @FromDomain VARCHAR(20)
 		,@ToDomain VARCHAR(20)
@@ -45,6 +47,8 @@ BEGIN
 
 	DECLARE @NexCompanyId INT = 1
 		,@LumiCompanyId INT = 2
+        ,@OldEmpId INT
+        ,@NewEmpId INT
 
 	SELECT @FromDomain = [Value] FROM dbo.SystemSetting WITH (NOLOCK) WHERE [Name] = 'DomainName'
 	SELECT @FromDomainEmail = [Value] FROM dbo.SystemSetting WITH (NOLOCK) WHERE [Name] = 'DomainEmail'
@@ -74,37 +78,52 @@ BEGIN
 
 		IF EXISTS (SELECT 1 FROM bodb_HRM.dbo.CompanyEmployee WITH (NOLOCK) WHERE EmpId = @EmployeeId AND CompanyId = @ToCompanyId)
 		BEGIN
-			UPDATE a WITH (UPDLOCK, ROWLOCK)
+			SET @NewEmpId = @EmployeeId
+            
+			UPDATE a
 				SET a.IsSpecialUser = @IsSpecialUser
 				,a.IsDeleted = 0
 				,a.Enabled = 1
 				,a.GroupId = @ToGroupId
 				,a.Roles = b.Roles
 				,a.CompanyDate = @AffectedDate
-				,a.ConfirmedDate = @AffectedDate
 				,a.SalaryGroupId = b.SalaryGroupId
-			FROM bodb_HRM.dbo.CompanyEmployee AS a 
-			INNER JOIN bodb_HRM.dbo.CompanyEmployee AS b ON a.EmpId = b.EmpId AND b.CompanyId = @FromCompanyId
+			FROM bodb_HRM.dbo.CompanyEmployee AS a WITH (ROWLOCK)
+			    INNER JOIN bodb_HRM.dbo.CompanyEmployee AS b ON a.EmpId = b.EmpId AND b.CompanyId = @FromCompanyId
 			WHERE a.EmpId = @employeeId AND a.CompanyId = @ToCompanyId
 		END
 		ELSE
 		BEGIN
-			INSERT INTO bodb_HRM.dbo.CompanyEmployee (
+            SELECT @OldEmpId = MAX(OldEmpId)
+            FROM bodb_HRM.dbo.CompanyEmployee WITH (NOLOCK)
+            WHERE CompanyId = @ToCompanyId
+
+            SET @OldEmpId = ISNULL(@OldEmpId, 0) + 1
+
+            SELECT @NewEmpId = MAX(EmpId)
+            FROM bodb_HRM.dbo.CompanyEmployee WITH (NOLOCK)
+
+            SET @NewEmpId = ISNULL(@NewEmpId, 0) + 1
+
+            INSERT INTO bodb_HRM.dbo.CompanyEmployee (
 				EmpId
+				,CompanyId
+                ,UserId
 				,DomainUsername
 				,Email
 				,IsSpecialUser
 				,IsDeleted
 				,Enabled
-				,GroupID
+				,GroupId
 				,Roles
 				,CompanyDate
-				,ConfirmedDate
 				,SalaryGroupId
-				,CompanyId
+                ,OldEmpId
 			)
 			SELECT 
-				@EmployeeId
+				@NewEmpId
+				,@ToCompanyId
+                ,UserId
 				,@ToDomain + REPLACE(DomainUsername, @FromDomain, '')
 				,REPLACE(DomainUsername, @FromDomain, '') + '@' + @ToDomainEmail
 				,@IsSpecialUser
@@ -113,49 +132,26 @@ BEGIN
 				,@ToGroupId
 				,Roles
 				,@AffectedDate
-				,@AffectedDate
 				,SalaryGroupId
-				,@ToCompanyId
+                ,@OldEmpId
 			FROM bodb_HRM.dbo.CompanyEmployee WITH (NOLOCK)
 			WHERE EmpId = @EmployeeId AND CompanyId = @FromCompanyId
 		END
 
-		INSERT INTO LumiHRM.dbo.EmployeeShift (
-            [EmpID]
-            ,[MonShift]
-            ,[TueShift]
-            ,[WedShift]
-            ,[ThuShift]
-            ,[FriShift]
-            )
-        VALUES (
-            @EmployeeId
-            ,@ShiftId
-            ,@ShiftId
-            ,@ShiftId
-            ,@ShiftId
-            ,@ShiftId
-            )
+		INSERT INTO LumiHRM.dbo.EmployeeShift ([EmpId], [MonShift], [TueShift], [WedShift], [ThuShift], [FriShift])
+        VALUES (@NewEmpId, @ShiftId, @ShiftId, @ShiftId, @ShiftId, @ShiftId)
 
-        INSERT INTO LumiHRM.dbo.EmployeeGroup_Employee (
-            GroupId
-            ,EmpID
-            ,isMainGroup
-            )
-        VALUES (
-            @ToGroupId
-            ,@EmployeeId
-            ,1
-            )
+        INSERT INTO LumiHRM.dbo.EmployeeGroup_Employee (GroupId, EmpId, isMainGroup)
+        VALUES (@ToGroupId, @NewEmpId, 1)
 
         SET @todate = DATEADD(yy, DATEDIFF(yy, 0, dbo.fnc_GetClientDateTime()) + 1, -1)
 
-        EXECUTE LumiHRM.dbo.EmployeeCalendar_Insert @EmployeeId
+        EXECUTE LumiHRM.dbo.EmployeeCalendar_Insert @NewEmpId
             ,@AffectedDate
             ,@todate
 
 		-- AL
-		IF(@IsTransferAnnualLeaveBalance = 1)
+		IF @IsTransferAnnualLeaveBalance = 1
 		BEGIN
 			SELECT @CreditDays = SUM(ISNULL (CreditDays, 0)) - SUM(ISNULL(DeductDays, 0))
 			FROM dbo.LeaveTrans WITH (NOLOCK)
@@ -163,66 +159,36 @@ BEGIN
 				AND YEAR(FromDate) = YEAR(@AffectedDate) 
 				AND ISNULL(Deleted, 0) <> 1
 
-			INSERT INTO LumiHRM.dbo.LeaveTrans (
-				EmpId
-				,Description
-				,FromDate
-				,ToDate
-				,DeductDays
-				,CreditDays
-				,CreatedDate
-				)
-			VALUES (
-				@EmployeeId
-				,'Init'
-				,@AffectedDate
-				,@ToDate
-				,0
-				,@CreditDays
-				,dbo.fnc_GetClientDateTime()
-				)
+			INSERT INTO LumiHRM.dbo.LeaveTrans (EmpId, Description, FromDate, ToDate, DeductDays, CreditDays, CreatedDate)
+			VALUES (@NewEmpId, 'Init', @AffectedDate, @ToDate, 0, @CreditDays, dbo.fnc_GetClientDateTime())
 		END
 
 		-- Late In/Early Out
-		IF (@IsTransferLateInEarlyOut = 1)
+		IF @IsTransferLateInEarlyOut = 1
 		BEGIN
 			SELECT @LateInEarlyOut = CASE 
 				WHEN ISNULL(la.[Minutes], 0) > ISNULL(oty.[Minutes], 0) THEN (ISNULL(la.[Minutes], 0) - ISNULL(oty.[Minutes], 0))
-				ELSE 0
-				END
+				ELSE 0 END
 			FROM dbo.LateInEarlyOutYearly la WITH (NOLOCK)
-			LEFT JOIN dbo.OvertimeYearly oty WITH (NOLOCK) ON la.EmpId = oty.EmpId AND oty.[Year] = YEAR(@AffectedDate)
+			    LEFT JOIN dbo.OvertimeYearly oty WITH (NOLOCK) ON la.EmpId = oty.EmpId AND oty.[Year] = YEAR(@AffectedDate)
 			WHERE la.EmpId = @EmployeeId AND la.[Year] = YEAR(@AffectedDate)
 
-			IF (@LateInEarlyOut IS NOT NULL)
+			IF @LateInEarlyOut IS NOT NULL
 			BEGIN
-				INSERT INTO LumiHRM.dbo.LateInEarlyOutTrans(
-					[EmpId]
-				  ,[WorkDate]
-				  ,[Type]
-				  ,[Minutes]
-				  ,[ModifiedDate]
-				  ,[IsManual]
-				)
-				VALUES(@EmployeeId, @AffectedDate, 2, @LateInEarlyOut, dbo.fnc_GetClientDateTime(), 1)
+				INSERT INTO LumiHRM.dbo.LateInEarlyOutTrans([EmpId], [WorkDate], [Type], [Minutes], [ModifiedDate], [IsManual])
+				VALUES(@NewEmpId, @AffectedDate, 2, @LateInEarlyOut, dbo.fnc_GetClientDateTime(), 1)
 			END
 			
-			INSERT INTO LumiHRM.dbo.LateInEarlyOutYearly(
-				[EmpId]
-				  ,[Year]
-				  ,[Minutes]
-				  ,[ModifiedDate]
-			)
-			VALUES(@EmployeeId, YEAR(@AffectedDate), ISNULL(@LateInEarlyOut, 0), dbo.fnc_GetClientDateTime())
+			INSERT INTO LumiHRM.dbo.LateInEarlyOutYearly([EmpId], [Year], [Minutes], [ModifiedDate])
+			VALUES(@NewEmpId, YEAR(@AffectedDate), ISNULL(@LateInEarlyOut, 0), dbo.fnc_GetClientDateTime())
 
 		END
 
-		IF (@IsTransferNexBalance = 1)
+		IF @IsTransferNexBalance = 1
 		BEGIN
 			SELECT @NexBalance = CASE 
 				WHEN ISNULL(oty.[Minutes], 0) > ISNULL(la.[Minutes], 0) THEN (ISNULL(oty.[Minutes], 0) - ISNULL(la.[Minutes], 0))
-				ELSE 0
-				END
+				ELSE 0 END
 			FROM dbo.Employee AS e WITH (NOLOCK)
 				LEFT JOIN dbo.OvertimeYearly AS oty WITH (NOLOCK) ON e.Id = oty.EmpId
 				AND oty.[Year] = YEAR(@AffectedDate)
@@ -230,41 +196,17 @@ BEGIN
 				AND la.[Year] = YEAR(@AffectedDate)
 			WHERE e.Id = @EmployeeId
 
-			IF (@NexBalance <> 0)
+			IF @NexBalance <> 0
 			BEGIN
-				INSERT INTO LumiHRM.dbo.OvertimeTrans(
-							EmpId
-							,[Date]
-							,[Minutes]
-							,[Type]
-							,ModifiedBy
-							,ModifiedDate
-							)
-							SELECT 
-							@EmployeeId
-							,@AffectedDate
-							,@NexBalance
-							,1
-							,@ModifiedBy
-							,dbo.fnc_GetClientDateTime()
+				INSERT INTO LumiHRM.dbo.OvertimeTrans(EmpId, [Date], [Minutes], [Type], ModifiedBy, ModifiedDate)
+				VALUES (@NewEmpId, @AffectedDate, @NexBalance, 1, @ModifiedBy, dbo.fnc_GetClientDateTime())
 			END
 
-			INSERT INTO LumiHRM.dbo.OvertimeYearly (
-					EmpId
-					,[Year]
-					,[Minutes]
-					,[ModifiedBy]
-					,[ModifiedDate]
-					)
-				VALUES(@EmployeeId
-					,YEAR(@AffectedDate)
-					,@NexBalance
-					,@ModifiedBy
-					,dbo.fnc_GetClientDateTime()
-				)
+			INSERT INTO LumiHRM.dbo.OvertimeYearly (EmpId, [Year], [Minutes], [ModifiedBy], [ModifiedDate])
+				VALUES(@NewEmpId, YEAR(@AffectedDate), @NexBalance, @ModifiedBy, dbo.fnc_GetClientDateTime())
 		END
 	END
-	ELSE IF (@FromCompanyId = @LumiCompanyId)
+	ELSE IF @FromCompanyId = @LumiCompanyId
 	BEGIN
 		SET @ToCompanyId = @NexCompanyId
 		SELECT @ToDomain = [Value] FROM NexHRM.dbo.SystemSetting WITH (NOLOCK) WHERE [Name] = 'DomainName'
@@ -288,7 +230,9 @@ BEGIN
 
 		IF EXISTS (SELECT 1 FROM bodb_HRM.dbo.CompanyEmployee WITH (NOLOCK) WHERE EmpId = @EmployeeId AND CompanyId = @ToCompanyId)
 		BEGIN
-			UPDATE a WITH (UPDLOCK, ROWLOCK)
+			SET @NewEmpId = @EmployeeId
+            
+            UPDATE a WITH (ROWLOCK)
 				SET a.DomainUsername = @ToDomain + REPLACE(a.DomainUsername, @FromDomain, '') 
 				,a.Email = REPLACE(a.DomainUsername, @FromDomain, '') + '@' + @ToDomainEmail
 				,a.IsSpecialUser = @IsSpecialUser
@@ -297,13 +241,23 @@ BEGIN
 				,a.GroupId = @ToGroupId
 				,a.Roles = b.Roles
 				,a.CompanyDate = @AffectedDate
-				,a.ConfirmedDate = @AffectedDate
 			FROM bodb_HRM.dbo.CompanyEmployee AS a 
-			INNER JOIN bodb_HRM.dbo.CompanyEmployee AS b ON a.EmpId = b.EmpId AND b.CompanyId = @FromCompanyId
+			    INNER JOIN bodb_HRM.dbo.CompanyEmployee AS b ON a.EmpId = b.EmpId AND b.CompanyId = @FromCompanyId
 			WHERE a.EmpId = @employeeId AND a.CompanyId = @ToCompanyId
 		END
 		ELSE
 		BEGIN
+            SELECT @OldEmpId = MAX(OldEmpId)
+            FROM bodb_HRM.dbo.CompanyEmployee WITH (NOLOCK)
+            WHERE CompanyId = @ToCompanyId
+
+            SET @OldEmpId = ISNULL(@OldEmpId, 0) + 1
+
+            SELECT @NewEmpId = MAX(EmpId)
+            FROM bodb_HRM.dbo.CompanyEmployee WITH (NOLOCK)
+
+            SET @NewEmpId = ISNULL(@NewEmpId, 0) + 1
+
 			INSERT INTO bodb_HRM.dbo.CompanyEmployee (
 				EmpId
 				,DomainUsername
@@ -314,12 +268,12 @@ BEGIN
 				,GroupID
 				,Roles
 				,CompanyDate
-				,ConfirmedDate
 				,SalaryGroupId
 				,CompanyId
+                ,OldEmpId
 			)
 			SELECT 
-				@EmployeeId
+				@NewEmpId
 				,@ToDomain + REPLACE(DomainUsername, @FromDomain, '')
 				,REPLACE(DomainUsername, @FromDomain, '') + '@' + @ToDomainEmail
 				,@IsSpecialUser
@@ -328,116 +282,64 @@ BEGIN
 				,@ToGroupId
 				,Roles
 				,@AffectedDate
-				,@AffectedDate
 				,SalaryGroupId
 				,@ToCompanyId
+                ,@OldEmpId
 			FROM bodb_HRM.dbo.CompanyEmployee WITH (NOLOCK)
 			WHERE EmpId = @EmployeeId AND CompanyId = @FromCompanyId
 		END
 
-		INSERT INTO NexHRM.dbo.EmployeeShift (
-            [EmpID]
-            ,[MonShift]
-            ,[TueShift]
-            ,[WedShift]
-            ,[ThuShift]
-            ,[FriShift]
-            )
-        VALUES (
-            @EmployeeId
-            ,@ShiftId
-            ,@ShiftId
-            ,@ShiftId
-            ,@ShiftId
-            ,@ShiftId
-            )
+		INSERT INTO NexHRM.dbo.EmployeeShift ([EmpId], [MonShift], [TueShift], [WedShift], [ThuShift], [FriShift])
+        VALUES (@NewEmpId, @ShiftId, @ShiftId, @ShiftId, @ShiftId, @ShiftId)
 
-        INSERT INTO NexHRM.dbo.EmployeeGroup_Employee (
-            GroupId
-            ,EmpID
-            ,isMainGroup
-            )
-        VALUES (
-            @ToGroupId
-            ,@EmployeeId
-            ,1
-            )
+        INSERT INTO NexHRM.dbo.EmployeeGroup_Employee (GroupId, EmpId, isMainGroup)
+        VALUES (@ToGroupId, @NewEmpId, 1)
 
         SET @todate = DATEADD(yy, DATEDIFF(yy, 0, dbo.fnc_GetClientDateTime()) + 1, -1)
 
-        EXECUTE NexHRM.dbo.EmployeeCalendar_Insert @EmployeeId
+        EXECUTE NexHRM.dbo.EmployeeCalendar_Insert @NewEmpId
             ,@AffectedDate
             ,@todate
 
 		-- AL
-		IF(@IsTransferAnnualLeaveBalance = 1)
+		IF @IsTransferAnnualLeaveBalance = 1
 		BEGIN
 			SELECT @CreditDays = SUM(ISNULL (CreditDays, 0)) - SUM(ISNULL(DeductDays, 0))
 			FROM dbo.LeaveTrans WITH (NOLOCK)
-			WHERE EmpId = @EmployeeId 
+			WHERE EmpId = @NewEmpId 
 				AND YEAR(FromDate) = YEAR(@AffectedDate) 
 				AND ISNULL(Deleted, 0) <> 1
 
-			INSERT INTO NexHRM.dbo.LeaveTrans (
-				EmpId
-				,Description
-				,FromDate
-				,ToDate
-				,DeductDays
-				,CreditDays
-				,CreatedDate
-				)
-			VALUES (
-				@EmployeeId
-				,'Init'
-				,@AffectedDate
-				,@ToDate
-				,0
-				,@CreditDays
-				,dbo.fnc_GetClientDateTime()
-				)
+			INSERT INTO NexHRM.dbo.LeaveTrans (EmpId, Description, FromDate, ToDate, DeductDays, CreditDays, CreatedDate)
+			VALUES (@NewEmpId, 'Init', @AffectedDate, @ToDate, 0, @CreditDays, dbo.fnc_GetClientDateTime())
 		END
 
 		-- Late In/Early Out
-		IF (@IsTransferLateInEarlyOut = 1)
+		IF @IsTransferLateInEarlyOut = 1
 		BEGIN
 			SELECT @LateInEarlyOut = CASE 
 				WHEN ISNULL(la.[Minutes], 0) > ISNULL(oty.[Minutes], 0) THEN (ISNULL(la.[Minutes], 0) - ISNULL(oty.[Minutes], 0))
-				ELSE 0
-				END
+				ELSE 0 END
 			FROM dbo.LateInEarlyOutYearly la WITH (NOLOCK)
-			LEFT JOIN dbo.OvertimeYearly oty WITH (NOLOCK) ON la.EmpId = oty.EmpId AND oty.[Year] = YEAR(@AffectedDate)
+			    LEFT JOIN dbo.OvertimeYearly oty WITH (NOLOCK) ON la.EmpId = oty.EmpId AND oty.[Year] = YEAR(@AffectedDate)
 			WHERE la.EmpId = @EmployeeId AND la.[Year] = YEAR(@AffectedDate)
 
-			IF (@LateInEarlyOut IS NOT NULL)
+			IF @LateInEarlyOut IS NOT NULL
 			BEGIN
-				INSERT INTO NexHRM.dbo.LateInEarlyOutTrans(
-				  [EmpId]
-				  ,[WorkDate]
-				  ,[Type]
-				  ,[Minutes]
-				  ,[ModifiedDate]
-				  ,[IsManual]
-				)
-				VALUES(@EmployeeId, @AffectedDate, 2, @LateInEarlyOut, dbo.fnc_GetClientDateTime(), 1)
+				INSERT INTO NexHRM.dbo.LateInEarlyOutTrans([EmpId], [WorkDate], [Type], [Minutes], [ModifiedDate], [IsManual])
+				VALUES (@NewEmpId, @AffectedDate, 2, @LateInEarlyOut, dbo.fnc_GetClientDateTime(), 1)
 			END
 			
-			INSERT INTO NexHRM.dbo.LateInEarlyOutYearly(
-				[EmpId]
-				  ,[Year]
-				  ,[Minutes]
-				  ,[ModifiedDate]
-			)
-			VALUES(@EmployeeId, YEAR(@AffectedDate), ISNULL(@LateInEarlyOut, 0), dbo.fnc_GetClientDateTime())
+			INSERT INTO NexHRM.dbo.LateInEarlyOutYearly([EmpId], [Year], [Minutes], [ModifiedDate])
+			VALUES (@NewEmpId, YEAR(@AffectedDate), ISNULL(@LateInEarlyOut, 0), dbo.fnc_GetClientDateTime())
 
 		END
 
-		IF (@IsTransferNexBalance = 1)
+		IF @IsTransferNexBalance = 1
 		BEGIN
 			SELECT @NexBalance = CASE 
 				WHEN ISNULL(oty.[Minutes], 0) > ISNULL(la.[Minutes], 0) THEN (ISNULL(oty.[Minutes], 0) - ISNULL(la.[Minutes], 0))
-				ELSE 0
-				END
+				ELSE 0 END
 			FROM dbo.Employee AS e WITH (NOLOCK)
 				LEFT JOIN dbo.OvertimeYearly AS oty WITH (NOLOCK) ON e.Id = oty.EmpId
 				AND oty.[Year] = YEAR(@AffectedDate)
@@ -445,50 +347,20 @@ BEGIN
 				AND la.[Year] = YEAR(@AffectedDate)
 			WHERE e.Id = @EmployeeId
 
-			IF (@NexBalance <> 0)
+			IF @NexBalance <> 0
 			BEGIN
-				INSERT INTO NexHRM.dbo.OvertimeTrans(
-							EmpId
-							,[Date]
-							,[Minutes]
-							,[Type]
-							,ModifiedBy
-							,ModifiedDate
-							)
-							SELECT 
-							@EmployeeId
-							,@AffectedDate
-							,@NexBalance
-							,1
-							,@ModifiedBy
-							,dbo.fnc_GetClientDateTime()
+				INSERT INTO NexHRM.dbo.OvertimeTrans( EmpId, [Date], [Minutes], [Type], ModifiedBy, ModifiedDate)
+				VALUES (@NewEmpId, @AffectedDate, @NexBalance, 1, @ModifiedBy, dbo.fnc_GetClientDateTime())
 			END
 
-			INSERT INTO NexHRM.dbo.OvertimeYearly (
-					EmpId
-					,[Year]
-					,[Minutes]
-					,[ModifiedBy]
-					,[ModifiedDate]
-					)
-				VALUES(@EmployeeId
-					,YEAR(@AffectedDate)
-					,@NexBalance
-					,@ModifiedBy
-					,dbo.fnc_GetClientDateTime()
-				)
+			INSERT INTO NexHRM.dbo.OvertimeYearly (EmpId, [Year], [Minutes], [ModifiedBy], [ModifiedDate])
+			VALUES (@NewEmpId, YEAR(@AffectedDate), @NexBalance, @ModifiedBy, dbo.fnc_GetClientDateTime())
 		END
 	END
 
 	UPDATE bodb_HRM.dbo.CompanyEmployee WITH (ROWLOCK, UPDLOCK)
 	SET [Enabled] = 0
-		,ResignedDate = @LastWorkingDate
 	WHERE EmpId = @EmployeeId AND CompanyId = @FromCompanyId
-
-	UPDATE bodb_HRM.dbo.Employee WITH (ROWLOCK, UPDLOCK)
-	SET ModifiedDate = dbo.fnc_GetClientDateTime()
-		,ModifiedBy = @ModifiedBy
-	WHERE EmpId = @EmployeeId
 
         COMMIT TRANSACTION;
     END TRY
