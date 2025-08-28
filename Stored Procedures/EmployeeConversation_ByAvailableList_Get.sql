@@ -9,6 +9,7 @@ AS
     DB: NexHRM
 
     Revisions:    
+		- 20250828@Henry.Dinh: map new empid
     Param's Explanation:
 */
 BEGIN
