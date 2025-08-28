@@ -1,6 +1,6 @@
 /*<info serverAlias="HRM-NexHRM,HRM-LumiHRM,HRM-NexVisionHRM" executers="wsv_hrm" isFunction="0"></info>*/
 
-CREATE OR ALTER   PROCEDURE [dbo].[Nex_WorkingTimeRequest_Get]
+ALTER PROCEDURE [dbo].[Nex_WorkingTimeRequest_Get]
 (
     @SupervisorId INT = NULL
     ,@empid INT = NULL
