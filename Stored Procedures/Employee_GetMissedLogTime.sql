@@ -1,21 +1,21 @@
-﻿
-CREATE     PROCEDURE [dbo].[Employee_GetMissedLogTime]
+﻿/*<info serverAlias="HRM-NexHRM,HRM-LumiHRM,HRM-NexVisionHRM" executers="wsv_hrm" isFunction="0"></info>*/
+ALTER PROCEDURE [dbo].[Employee_GetMissedLogTime]
     @FromDate DATE = NULL,
     @ToDate DATE = NULL
 AS
 /*
-Created: 20250228@Henry.dinh
-Task: Insert/Update get missed logging 
-DB: NexHRM
-Original: Employee_GetMissedLogTime
-Revisions:  
-	- 20250307 - Added date range parameters and changed to use Date instead of Month/Year
-				 Default date range is now first day to last day of current month
-	- 20240319 - Removed RedmineNexcel dependencies as it's now handled by a separate API
-	- 20250904@Henry - Changed to use date range date last day
-Param's Explanation:
-- @FromDate: Optional start date for filtering (defaults to first day of current month if NULL)
-- @ToDate: Optional end date for filtering (defaults to last day of current month if NULL)
+    Created: 20250228@Henry.dinh
+    Task: Insert/Update get missed logging 
+    DB: NexHRM
+    Original: Employee_GetMissedLogTime
+    Revisions:  
+        - 20250307 - Added date range parameters and changed to use Date instead of Month/Year
+                    Default date range is now first day to last day of current month
+        - 20240319 - Removed RedmineNexcel dependencies as it's now handled by a separate API
+        - 20250904@Henry - Changed to use date range date last day
+    Param's Explanation:
+    - @FromDate: Optional start date for filtering (defaults to first day of current month if NULL)
+    - @ToDate: Optional end date for filtering (defaults to last day of current month if NULL)
 */
 BEGIN
     DECLARE @Yesterday DATE = 
