@@ -13,6 +13,7 @@ AS
                     Default date range is now first day to last day of current month
         - 20240319 - Removed RedmineNexcel dependencies as it's now handled by a separate API
         - 20250904@Henry - Changed to use date range date last day
+        - 20250909@Henry - Join on ApproverId = EmpId
     Param's Explanation:
     - @FromDate: Optional start date for filtering (defaults to first day of current month if NULL)
     - @ToDate: Optional end date for filtering (defaults to last day of current month if NULL)
@@ -86,8 +87,7 @@ BEGIN
         edu.DomainUsername
     FROM [dbo].[EmployeeGroup] eg WITH (NOLOCK)
     INNER JOIN [dbo].[Employee] e WITH (NOLOCK) ON eg.Id = e.GroupId
-    LEFT JOIN [dbo].[GroupSupervisor] gs WITH (NOLOCK) ON eg.Id = gs.GroupId AND (gs.IsDeleted = 0 OR gs.IsDeleted IS NULL)
-    LEFT JOIN [dbo].[EmployeeSupervisor] es WITH (NOLOCK) ON e.Id = es.EmpId AND (es.IsDeleted = 0 OR es.IsDeleted IS NULL)
+    LEFT JOIN [dbo].[GroupSupervisor] gs WITH (NOLOCK) ON eg.Id = gs.GroupId AND gs.ApproverId = e.Id AND (gs.IsDeleted = 0 OR gs.IsDeleted IS NULL)
 	LEFT JOIN [HRM].[dbo].[JobTitle] jt WITH (NOLOCK) ON e.JobTitleId = jt.JobTitleId
     LEFT JOIN ExtractedDomainUsers edu ON e.Id = edu.Id
     LEFT JOIN MissedCounts mc ON e.Id = mc.EmpID
