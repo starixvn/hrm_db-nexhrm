@@ -1,5 +1,5 @@
-﻿
-CREATE   PROCEDURE [dbo].[Report_GetLateInEarlyOut] @Year INT
+﻿/*<info serverAlias="HRM-NexHRM,HRM-LumiHRM,HRM-NexVisionHRM" executers="wsv_hrm" isFunction="0"></info>*/
+ALTER PROCEDURE [dbo].[Report_GetLateInEarlyOut] @Year INT
 	,@GroupId INT = NULL
 	,@EmpId INT = NULL
 AS
@@ -12,6 +12,7 @@ AS
 	Revisions:
 		- 20160129@Razor.Nguyen: OT Feature
 		- 20250411@Henry.Dinh: Ignore CORE Team
+		- 20250919@Henry.Dinh: get payroll company
 	Param's Explanation:
 
 */
@@ -454,10 +455,13 @@ BEGIN
 		,g.Id AS TeamId
 		,g.Code AS TeamCode
 		,g.NAME AS TeamName
+		,e.PayrollCompanyId
+		,pc.[Name] AS PayrollCompanyName
 	FROM #PreviousYearBalance AS pv
 		INNER JOIN #CurrentYearBalance AS cu ON pv.EmpId = cu.EmpId
 		INNER JOIN dbo.Employee AS e WITH (NOLOCK) ON pv.EmpId = e.Id
 		INNER JOIN dbo.EmployeeGroup AS g WITH (NOLOCK) ON e.GroupId = g.Id
+		LEFT JOIN bodb_HRM.dbo.Company pc (NOLOCK) ON pc.CompanyId = e.PayrollCompanyId
 		LEFT JOIN #LateInEarlyOutSummary AS dt ON pv.EmpId = dt.EmpId
 		LEFT JOIN #tblAnnualLeaveBalance AS al ON al.EmpId = pv.EmpId
 		LEFT JOIN #PendingAnnualLeaveRequest AS rq ON e.Id = rq.EmpId
