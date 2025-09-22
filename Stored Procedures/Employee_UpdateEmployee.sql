@@ -44,6 +44,8 @@ ALTER PROCEDURE [dbo].[Employee_UpdateEmployee]
     ,@contactPhone VARCHAR(50) = NULL
     ,@contactAddress NVARCHAR(250) = NULL
     ,@groupDate DATE = NULL
+	,@salaryGroupId INT = NULL
+	,@payrollCompanyId INT = NULL
     ,@ErrCode INT = 0 OUTPUT
     ,@ErrMsg VARCHAR(MAX) = '' OUTPUT
 )
@@ -55,6 +57,7 @@ AS
 
     Revisions:
         20250819@Tim: restructure [Redmine: #235678]
+		20250919@Mira: Get Payroll Company
     Param's Explanation:
 */
 BEGIN
@@ -124,7 +127,8 @@ BEGIN
 		    'Phone="'+ COALESCE(@phone,SPACE(1)) + '" ' +
 		    'Gender="'+ COALESCE(CAST(@gender AS VARCHAR(4)),SPACE(1)) + '" ' +
 		    'GroupId="'+ COALESCE(CAST(@mainGroupID AS VARCHAR(50)),SPACE(1)) + '" ' +
-
+			'PayrollCompanyId="'+ COALESCE(CAST(@payrollCompanyId AS VARCHAR(50)),SPACE(1)) + '" ' +
+			'SalaryGroupId="'+ COALESCE(CAST(@salaryGroupId AS VARCHAR(50)),SPACE(1)) + '" ' +
 		    'Roles="'+ COALESCE(@Roles,SPACE(1)) + '" ' +
 		    'JoinedDate="'+ COALESCE(CAST(@joinedDate AS VARCHAR(11)),SPACE(1)) + '" ' +
 		    'GroupDate="'+ COALESCE(CAST(@groupDate AS VARCHAR(11)),SPACE(1)) + '" ' +
@@ -195,6 +199,8 @@ BEGIN
             ,EmployeeCard = @EmployeeCard
 			,AutoApproveRequest = @autoApproveRequest
             ,DistanceToCompany = @distanceToCompany
+			,SalaryGroupId = @salaryGroupId
+			,PayrollCompanyId = @payrollCompanyId
             ,ModifiedBy = @modifiedBy
             ,ModifiedDate = GETDATE()
 		WHERE EmpId = @employeeId
