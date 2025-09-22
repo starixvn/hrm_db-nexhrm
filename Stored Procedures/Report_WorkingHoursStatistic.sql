@@ -1,4 +1,6 @@
-﻿ALTER   PROCEDURE [dbo].[Report_WorkingHoursStatistic]
+﻿/*<info serverAlias="HRM-NexHRM,HRM-LumiHRM,HRM-NexVisionHRM" executers="wsv_hrm" isFunction="0"></info>*/
+
+ALTER   PROCEDURE [dbo].[Report_WorkingHoursStatistic]
 	 @fromdate DATETIME
 	,@todate DATETIME
 	,@FromDateLastMonth DATETIME
