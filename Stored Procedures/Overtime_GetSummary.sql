@@ -1,5 +1,6 @@
-﻿
-CREATE   PROCEDURE [dbo].[Overtime_GetSummary] 
+﻿/*<info serverAlias="HRM-NexHRM,HRM-LumiHRM,HRM-NexVisionHRM" executers="wsv_hrm" isFunction="0"></info>*/
+
+ALTER   PROCEDURE [dbo].[Overtime_GetSummary] 
 	@year			INT
 	,@employeeId	INT = NULL
 	,@groupId		INT = NULL
@@ -13,6 +14,7 @@ AS
 	Revisions:
 		- 20200723Dwight.Tran: Enhance NEX request
 		- 20250507@Henry.Dinh: update group id from 11 to 1081
+		- 20250919@Jay.Do: Add PayrollCompany
 	Param's Explanation:
 */
 BEGIN
@@ -239,7 +241,9 @@ BEGIN
 		,e.GroupId AS TeamId
 		,eg.Code AS TeamCode
 		,eg.NAME AS TeamName
+		,c.[Name] AS PayrollCompanyName
 	FROM dbo.Employee e
+		LEFT JOIN bodb_HRM.dbo.Company c (NOLOCK) ON c.CompanyId = e.PayrollCompanyId
 		INNER JOIN dbo.EmployeeGroup AS eg WITH (NOLOCK) ON e.GroupId = eg.Id
 		LEFT JOIN dbo.Department AS d WITH (NOLOCK) ON eg.DepartmentId = d.DepartmentId
 		LEFT JOIN #OvertimeSummary AS os WITH (NOLOCK) ON e.Id = os.EmployeeId

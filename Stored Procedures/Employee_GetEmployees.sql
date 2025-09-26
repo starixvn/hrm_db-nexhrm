@@ -1,4 +1,6 @@
-﻿CREATE   PROCEDURE [dbo].[Employee_GetEmployees] @query NVARCHAR(256)
+﻿/*<info serverAlias="HRM-NexHRM,HRM-LumiHRM,HRM-NexVisionHRM" executers="wsv_hrm" isFunction="0"></info>*/
+
+ALTER   PROCEDURE [dbo].[Employee_GetEmployees] @query NVARCHAR(256)
     ,@groupId INT = NULL
     ,@departmentId INT = NULL
     ,@jobTitleId INT = NULL
@@ -20,6 +22,7 @@ Revisions:
 	20200505@Merlin.Le: Add isSpecial IN PARAM
 	20250308@Henry.Dinh: Add management grade
     20250514@Henry.Dinh: Add departmentId IN PARAM
+	20250919@Jay.Do: Add PayrollCompany
 Param's Explanation:
 
 */
@@ -87,6 +90,7 @@ BEGIN
         ,[Skype]
         ,[Yahoo]
         ,[Marriage]
+		,PayrollCompanyName
         ,d.DepartmentId
 		,d.[Name] AS DepartmentName
 		,gra.Code AS JobGradeCode
@@ -176,8 +180,10 @@ BEGIN
 			,[ContactPhone]
 			,[ContactAddress]
 			,[SocialInsuranceNo]
+			,c.[Name] AS PayrollCompanyName
         FROM dbo.Employee AS em WITH (NOLOCK)
 		INNER JOIN bodb_HRM.dbo.[Group] AS emg WITH (NOLOCK) ON em.GroupId = emg.GroupId
+		LEFT JOIN bodb_HRM.dbo.Company c (NOLOCK) ON c.CompanyId = em.PayrollCompanyId
         WHERE 
             (IsSpecialUser = @isSpecial
 				OR @isSpecial IS NULL)

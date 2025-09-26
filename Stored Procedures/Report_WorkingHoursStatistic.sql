@@ -1,5 +1,6 @@
-﻿
-CREATE   PROCEDURE [dbo].[Report_WorkingHoursStatistic]
+﻿/*<info serverAlias="HRM-NexHRM,HRM-LumiHRM,HRM-NexVisionHRM" executers="wsv_hrm" isFunction="0"></info>*/
+
+ALTER   PROCEDURE [dbo].[Report_WorkingHoursStatistic]
 	 @fromdate DATETIME
 	,@todate DATETIME
 	,@FromDateLastMonth DATETIME
@@ -7,6 +8,7 @@ CREATE   PROCEDURE [dbo].[Report_WorkingHoursStatistic]
 	,@empid INT = NULL
 	,@groupid INT = NULL
 	,@departmentid INT = NULL
+	,@payrollCompanyId INT = NULL
 AS
 /*
 Created: 2012/04/23@Dan
@@ -18,6 +20,7 @@ Revisions:
   20170411@Raymond.Le: create SP Report_WorkingHoursStatistic
   20191206@Merlin.Le: PreMonthSickLeave contains Maternity and Parternity
   20250515@Henry.Dinh: Add DepartmentId and DepartmentName
+  20250919@Jay.Do: Add PayrollCompany
 Param's Explanation:
 
 */
@@ -286,12 +289,18 @@ FROM (
 			@groupid IS NULL
 			OR e.GroupId = @groupid
 			)
+		AND (
+			@payrollCompanyId IS NULL
+			OR e.PayrollCompanyId = @payrollCompanyId
+			)
 	GROUP BY c.empid
 	) AS pm
 
 SELECT
 	--(ActualWorkingDay + PaidLeave + UnpaidLeave + SickLeave + AccidentLaborLeave) AS WorkingDay
-	(TotalWorkingDay + ISNULL(Holiday, 0)) AS TotalWorkingDay
+	PayrollCompanyId
+	,PayrollCompanyName
+	,(TotalWorkingDay + ISNULL(Holiday, 0)) AS TotalWorkingDay
 	,(ActualWorkingDay + ISNULL(BusinessTrip, 0) + ISNULL(BusinessLeave, 0) + ISNULL(Holiday, 0)) AS ActualWorkingDay
 	,AnnualLeave
 	,PaidLeave
@@ -327,6 +336,8 @@ FROM (
 		,g.Id AS GroupId
 		,g.Code AS GroupCode
 		,g.NAME AS GroupName
+		,co.CompanyId AS PayrollCompanyId
+		,co.[Name] AS PayrollCompanyName
 		,g.Rank
 		,g.DepartmentId
 		,SUM(CASE 
@@ -517,6 +528,7 @@ FROM (
 		INNER JOIN dbo.EmployeeGroup g WITH (NOLOCK) ON g.Id = e.GroupId
 		LEFT JOIN dbo.LeaveType lv1 WITH (NOLOCK) ON c.LeaveTypeId = lv1.Id
 		LEFT JOIN dbo.LeaveType lv2 WITH (NOLOCK) ON c.LeaveTypeId2 = lv2.Id
+		LEFT JOIN bodb_HRM.dbo.Company co (NOLOCK) ON co.CompanyId = e.PayrollCompanyId
 	WHERE e.IsSpecialUser = 0
 		AND (
 			@empid IS NULL
@@ -536,6 +548,10 @@ FROM (
 			@departmentid IS NULL
 			OR g.DepartmentId = @departmentid
 			)
+		AND (
+			@payrollCompanyId IS NULL
+			OR e.PayrollCompanyId = @payrollCompanyId
+			)
 	GROUP BY c.empid
 		,e.Code
 		,FullName
@@ -545,6 +561,8 @@ FROM (
 		,g.Id
 		,g.Code
 		,g.NAME
+		,co.CompanyId
+		,co.[Name]
 		,[Rank]
 		,e.Id
 		,g.DepartmentId

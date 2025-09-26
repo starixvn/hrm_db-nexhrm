@@ -1,5 +1,6 @@
-﻿
-CREATE   PROCEDURE [dbo].[EmployeeAttendance_GetByType] @fromtime DATETIME
+﻿/*<info serverAlias="HRM-NexHRM,HRM-LumiHRM,HRM-NexVisionHRM" executers="wsv_hrm" isFunction="0"></info>*/
+
+ALTER   PROCEDURE [dbo].[EmployeeAttendance_GetByType] @fromtime DATETIME
     ,@totime DATETIME
     ,@type SMALLINT
     ,@empid INT = NULL
@@ -18,6 +19,7 @@ Original:
 
 Revisions:    
     - 20250515@Henry.Dinh: Add DepartmentName
+	- 20250919@Jay.Do: Add PayrollCompany
 Param's Explanation:
     @type: 0-all, 1-missing checkin; 2-missing check out, 3: latein; 4-earlyout, 5- not work
 */
@@ -45,6 +47,7 @@ BEGIN
         ,DepartmentName NVARCHAR(100)
         ,Team NVARCHAR(50)
         ,TeamCode VARCHAR(20)
+        ,PayrollCompanyName VARCHAR(50)
         ,[Rank] INT
         ,Roles INT
         ,AttendanceDate DATETIME
@@ -75,6 +78,7 @@ BEGIN
         ,T.DepartmentName
         ,T.Team
         ,T.TeamCode
+		,T.PayrollCompanyName
         ,T.[Rank]
         ,T.Roles
         ,T.AttendanceDate
@@ -143,6 +147,7 @@ BEGIN
             ,a.EmpId
             ,FullName
             ,NickName
+			,co.[Name] AS PayrollCompanyName
             ,d.Name AS DepartmentName
             ,g.NAME [Team]
             ,g.Code [TeamCode]
@@ -229,6 +234,7 @@ BEGIN
             LEFT JOIN dbo.EmployeeCalendar c WITH (NOLOCK) ON c.EmpId = a.EmpId
             AND c.Workdate = a.AttendanceDate
             INNER JOIN Employee e WITH (NOLOCK) ON a.Empid = e.Id
+			LEFT JOIN bodb_HRM.dbo.Company co (NOLOCK) ON co.CompanyId = e.PayrollCompanyId
             LEFT JOIN dbo.Shift s WITH (NOLOCK) ON s.Id = a.ShiftId
             LEFT JOIN dbo.EmployeeGroup g WITH (NOLOCK) ON e.groupid = g.Id
             LEFT JOIN dbo.Department d WITH (NOLOCK) ON g.DepartmentId = d.DepartmentId

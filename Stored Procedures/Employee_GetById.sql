@@ -1,5 +1,6 @@
-﻿
-CREATE   PROCEDURE [dbo].[Employee_GetById] @EmployeeId INT
+﻿/*<info serverAlias="HRM-NexHRM,HRM-LumiHRM,HRM-NexVisionHRM" executers="wsv_hrm" isFunction="0"></info>*/
+
+ALTER PROCEDURE [dbo].[Employee_GetById] @EmployeeId INT
 AS
 /*
 Created: 20160205@Quinn.Vo
@@ -11,6 +12,7 @@ Revisions:
 	20191206@Merlin.Le: Add PlaceOfBirth, ContactName, UserRelationship, ContactPhone, ContactAddress to table Employee
 	20252602@Henry.Dinh: Add Management Grade
     20250723@Henry.Dinh: Add AutoApproveRequest
+    20250919@Mira: Get Payroll Company
 Param's Explanation:
 
 */
@@ -86,6 +88,7 @@ BEGIN
 		,mgra.AffectedDate AS ManagementAffectedDate
 		,mgra.Note AS ManagementNote
         ,e.SalaryGroupId
+		,e.PayrollCompanyId
 		,e.SocialInsuranceNo
         ,e.[CreatedDate]
         ,e.[CreatedBy]
