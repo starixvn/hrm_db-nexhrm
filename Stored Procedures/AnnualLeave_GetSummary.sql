@@ -1,5 +1,5 @@
 ﻿
-CREATE   PROCEDURE [dbo].[AnnualLeave_GetSummary] @year INT
+ALTER PROCEDURE [dbo].[AnnualLeave_GetSummary] @year INT
     ,@employeeId INT = NULL
     ,@groupId INT = NULL
     ,@departmentId INT = NULL
@@ -12,6 +12,8 @@ DB: NexHR
 Original: 
 Revisions:
     - 20250516@Henry.Dinh: add department id filter
+	20250919@Mira: Get Payroll Company
+
 Param's Explanation:
 
 */
@@ -120,10 +122,12 @@ BEGIN
         ,e.GroupId AS TeamId
         ,g.Code AS TeamCode
         ,g.NAME AS TeamName
+		,c.Name 'PayrollCompanyName'
     FROM #CurrenBalace cb
         INNER JOIN Employee e WITH (NOLOCK) ON e.Id = cb.Empid
         INNER JOIN dbo.EmployeeGroup g WITH (NOLOCK) ON g.ID = e.GroupId
         INNER JOIN dbo.Department d WITH (NOLOCK) ON d.DepartmentId = g.DepartmentId
+		INNER JOIN bodb_HRM.dbo.Company c WITH (NOLOCK) ON c.CompanyId = e.PayrollCompanyId
      WHERE 
 		e.IsSpecialUser = 0
     ORDER BY d.Name
