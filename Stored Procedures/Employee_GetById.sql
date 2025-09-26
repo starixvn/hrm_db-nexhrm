@@ -1,4 +1,5 @@
-﻿
+﻿/*<info serverAlias="HRM-NexHRM,HRM-LumiHRM,HRM-NexVisionHRM" executers="wsv_hrm" isFunction="0"></info>*/
+
 ALTER PROCEDURE [dbo].[Employee_GetById] @EmployeeId INT
 AS
 /*

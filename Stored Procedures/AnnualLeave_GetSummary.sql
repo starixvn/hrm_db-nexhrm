@@ -1,4 +1,5 @@
-﻿
+﻿/*<info serverAlias="HRM-NexHRM,HRM-LumiHRM,HRM-NexVisionHRM" executers="wsv_hrm" isFunction="0"></info>*/
+
 ALTER PROCEDURE [dbo].[AnnualLeave_GetSummary] @year INT
     ,@employeeId INT = NULL
     ,@groupId INT = NULL
