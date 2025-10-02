@@ -1,5 +1,6 @@
 ﻿/*<info serverAlias="HRM-NexHRM,HRM-LumiHRM,HRM-NexVisionHRM" executers="wsv_hrm" isFunction="0"></info>*/
-ALTER   PROCEDURE [dbo].[WorkingTimeRequest_GetRequestByDate] @role INT
+
+ALTER PROCEDURE [dbo].[WorkingTimeRequest_GetRequestByDate] @role INT
     ,@fromdate DATETIME
     ,@todate DATETIME
     ,@empid INT = NULL
@@ -24,6 +25,7 @@ Revisions:
 	- 20250327@Henry: Update MGT Code -> MGT/COR code
     - 20250707@Henry.Dinh: Query to bodb_HRM.dbo.Employee.
 	- 20250821@Jay: restructure [Redmine: #235678]
+    - 20250924@Jay: user status filter [Redmine: #239089]
 Param's Explanation:
 
 */
@@ -53,6 +55,7 @@ BEGIN
         DROP TABLE #WorkingTimeRequest
     END
 
+
     CREATE TABLE #WorkingTimeRequest (
         Id BIGINT
         ,EmpId INT
@@ -63,6 +66,8 @@ BEGIN
         ,Requester NVARCHAR(20)
         ,FullNameRequester NVARCHAR(50)
         ,EmailRequester VARCHAR(50)
+		,EmpEnabled BIT
+		,IsEmpDeleted BIT
         ,Team NVARCHAR(50)
         ,TeamCode VARCHAR(20)
         ,ProcessedBy NVARCHAR(20)
@@ -138,6 +143,8 @@ BEGIN
         ,e.NickName AS Requester
         ,e.FullName AS FullNameRequester
         ,e.Email AS EmailRequester
+		,e.[Enabled] AS EmpEnabled
+		,e.[IsDeleted] AS IsEmpDeleted
         ,g.NAME AS Team
         ,g.Code AS TeamCode
         ,CASE
@@ -313,6 +320,8 @@ BEGIN
         ,e.NickName AS Requester
         ,e.FullName AS FullNameRequester
         ,e.Email AS EmailRequester
+		,e.[Enabled] AS EmpEnabled
+		,e.[IsDeleted] AS IsEmpDeleted
         ,g.NAME AS Team
         ,g.Code AS TeamCode
         ,CASE
@@ -472,6 +481,8 @@ BEGIN
         ,e.NickName AS Requester
         ,e.FullName AS FullNameRequester
         ,e.Email AS EmailRequester
+		,e.[Enabled] AS EmpEnabled
+		,e.[IsDeleted] AS IsEmpDeleted
         ,g.NAME AS Team
         ,g.Code AS TeamCode 
         ,CASE
