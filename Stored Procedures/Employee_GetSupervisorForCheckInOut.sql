@@ -1,16 +1,18 @@
-﻿
-CREATE   PROCEDURE [dbo].[Employee_GetSupervisorForCheckInOut] 
+﻿/*<info serverAlias="HRM-NexHRM,HRM-LumiHRM,HRM-NexVisionHRM" executers="wsv_hrm" isFunction="0"></info>*/
+
+ALTER  PROCEDURE [dbo].[Employee_GetSupervisorForCheckInOut] 
 	@employeeId INT
 	,@IsStandbyAtWeekend BIT 
 AS
 /*
-Created: 20240329@Quinn
-Task: Get Supervisors for notification check in/out request.
-DB: NexHR
-Original: 
+	Created: 20240329@Quinn
+	Task: Get Supervisors for notification check in/out request.
+	DB: NexHR
+	Original: 
 
-Revisions:    
-Param's Explanation:
+	Revisions:    
+		20251028@Henry: Add department ID
+	Param's Explanation:
 */
 BEGIN
     SET NOCOUNT ON;
@@ -85,6 +87,7 @@ BEGIN
 		,e.NickName
 		,e.FullName
 		,e.Code
+		,e.DepartmentId
 		,sup.SupervisorId
 		,sup.SupervisorNickName
 		,sup.SupervisorFullName
@@ -92,12 +95,14 @@ BEGIN
 		,sup.SupervisorConversationId
 		,sup.IsReadOnly
 	FROM (
-			SELECT Id AS EmpId
-			,NickName
-			,FullName
-			,Code 
-			FROM dbo.Employee WITH (NOLOCK)
-			WHERE Id = @employeeId
+			SELECT e.Id AS EmpId
+			,e.NickName
+			,e.FullName
+			,e.Code 
+			,eg.DepartmentId
+			FROM dbo.Employee AS e WITH (NOLOCK)
+			LEFT JOIN dbo.EmployeeGroup AS eg WITH (NOLOCK) ON e.GroupId = eg.Id
+			WHERE e.Id = @employeeId
 		) AS e
 		INNER JOIN
 		(
