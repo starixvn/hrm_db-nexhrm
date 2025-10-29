@@ -14,6 +14,7 @@ AS
 	Revisions:
 		20250327@Henry: Update MGT Code -> MGT/COR code
         20250819@Tim: restructure [Redmine: #235678]
+		20251028@Henry: Add department ID
 	Param's Explanation:
 */
 BEGIN
@@ -89,6 +90,7 @@ BEGIN
 		,e.NickName
 		,e.FullName
 		,e.Code
+		,e.DepartmentId
 		,sup.SupervisorId
         ,sup.SupervisorNickName
         ,sup.SupervisorFullName
@@ -102,8 +104,10 @@ BEGIN
 			    ,ce.Nickname
 			    ,e.FullName
 			    ,ce.Code
+				,g.DepartmentId
 			FROM bodb_HRM.dbo.Employee AS e WITH (NOLOCK)
                 INNER JOIN bodb_HRM.dbo.CompanyEmployee AS ce WITH (NOLOCK) ON e.UserId = ce.UserId
+                LEFT JOIN bodb_HRM.dbo.[Group] AS g WITH (NOLOCK) ON ce.GroupId = g.GroupId
 			WHERE ce.EmpId = @employeeId
 		) AS e
 		INNER JOIN
