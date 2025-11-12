@@ -7,9 +7,8 @@ Created: 20141229@Quinn.Vo
 Task: Get current is open and close balance. 
 DB: NexEPA
 Original: 
-	- 20251110@Henry.Dinh: origin version
-	- 20251112@Henry.Dinh: remove check working time request
 Revisions:  
+	- 20251112@Henry.Dinh: remove check working time request
 Param's Explanation:
 
 */
