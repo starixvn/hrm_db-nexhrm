@@ -1,4 +1,11 @@
-﻿
+﻿/*
+    Created: Henry@20251110
+    Task: add column leave balance related to view
+    DB: NexHRM,LumiHRM,NexVisionHRM
+    Original:
+    Revisions:
+        - 20251110@Henry: add column leave balance related to view
+*/
 ALTER VIEW [dbo].[EmployeeGroup]
 
 AS 
