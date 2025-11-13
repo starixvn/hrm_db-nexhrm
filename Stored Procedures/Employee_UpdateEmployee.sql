@@ -46,6 +46,7 @@ ALTER PROCEDURE [dbo].[Employee_UpdateEmployee]
     ,@groupDate DATE = NULL
 	,@salaryGroupId INT = NULL
 	,@payrollCompanyId INT = NULL
+	,@isLocal BIT = NULL
     ,@ErrCode INT = 0 OUTPUT
     ,@ErrMsg VARCHAR(MAX) = '' OUTPUT
 )
@@ -57,7 +58,8 @@ AS
 
     Revisions:
         20250819@Tim: restructure [Redmine: #235678]
-		20250919@Mira: Get Payroll Company
+		20250919@Mira: Get Payroll 
+		20251113@Henry: Add isLocal parameter
     Param's Explanation:
 */
 BEGIN
@@ -124,6 +126,7 @@ BEGIN
 		    'Enabled="'+ COALESCE(CAST(@enabled AS VARCHAR(11)),SPACE(1)) + '" ' +
 		    'IsSpecialUser="'+ COALESCE(CAST(@isSpecialUser AS VARCHAR(4)),SPACE(1)) + '" ' +
 		    'AutoApproveRequest="'+ COALESCE(CAST(@autoApproveRequest AS VARCHAR(4)),SPACE(1)) + '" ' +
+			'IsLocal="'+ COALESCE(CAST(@isLocal AS VARCHAR(4)),SPACE(1)) + '" ' +
 		    'Phone="'+ COALESCE(@phone,SPACE(1)) + '" ' +
 		    'Gender="'+ COALESCE(CAST(@gender AS VARCHAR(4)),SPACE(1)) + '" ' +
 		    'GroupId="'+ COALESCE(CAST(@mainGroupID AS VARCHAR(50)),SPACE(1)) + '" ' +
@@ -204,6 +207,18 @@ BEGIN
             ,ModifiedBy = @modifiedBy
             ,ModifiedDate = GETDATE()
 		WHERE EmpId = @employeeId
+
+		IF EXISTS (SELECT 1 FROM [bodb_HRM].[dbo].[EmployeeSummary] WHERE EmpId = @employeeId)
+		BEGIN
+			UPDATE [bodb_HRM].[dbo].[EmployeeSummary]
+			SET IsLocal = @isLocal
+			WHERE EmpId = @employeeId
+		END
+		ELSE
+		BEGIN
+			INSERT INTO [bodb_HRM].[dbo].[EmployeeSummary] (EmpId, IsLocal)
+			VALUES (@employeeId, @isLocal)
+		END
 
 		INSERT INTO dbo.[Log](LogActionID, LogDate, Description, TrackingValue, UserID)
 		VALUES(5, GETDATE(), 'Update Employee', @logData, @employeeId)

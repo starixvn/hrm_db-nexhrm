@@ -9,8 +9,12 @@
 
 -- Init expat employee summary
 INSERT INTO [bodb_HRM].[dbo].[EmployeeSummary] ([EmpId], [IsLocal])
-VALUES (6081, 0),
-       (6596, 0);
+SELECT ce.EmpId,
+       CASE WHEN ce.EmpId IN (6081, 6596) THEN 0 ELSE 1 END AS IsLocal
+FROM [bodb_HRM].[dbo].[CompanyEmployee] ce
+LEFT JOIN [bodb_HRM].[dbo].[EmployeeSummary] es ON ce.EmpId = es.EmpId
+WHERE ce.CompanyId IN (1, 2, 34)
+  AND es.EmpId IS NULL;
 
 -- Init extra year for SD team
 UPDATE [bodb_HRM].[dbo].[Group]
