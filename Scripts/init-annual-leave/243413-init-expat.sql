@@ -32,6 +32,10 @@ WHERE CompanyId IN (1,2,34) AND GroupId IN
 (553, 519, 509); -- Local (HR,ITNW,FA)
 
 
+
+USE NexHRM;
+GO
+
 ALTER VIEW [dbo].[EmployeeGroup]
 
 AS 
