@@ -30,6 +30,7 @@ AS
     Revisions:    
         20250507@Henry: insert password
         20250819@Tim: restructure [Redmine: #235678]
+        20251114@Henry: init employee summary - islocal = 1
     Param's Explanation:
 */
 BEGIN
@@ -71,6 +72,9 @@ BEGIN
 	INSERT INTO bodb_HRM.dbo.CompanyEmployee (CompanyId, EmpId, UserId, Code, Nickname, DomainUsername, GroupId, [Enabled], IsDeleted, IsSpecialUser, CreatedDate, CreatedBy)
 	VALUES (@CompanyId, @EmpId, @UserId, @Code, @Nickname, @DomainUsername, @GroupId, 1, 0, 0, GETDATE(), @createBy)
 
+    INSERT INTO [bodb_HRM].[dbo].[EmployeeSummary] (EmpId, IsLocal)
+    VALUES (@EmpId, 1)
+    
     INSERT INTO dbo.EmployeeShift ([EmpId], [MonShift], [TueShift], [WedShift], [ThuShift], [FriShift], [SatShift], [SunShift])
     VALUES (@EmpId, @monShift, @tueShift, @wedShift, @thuShift, @friShift, @satShift, @sunShift)
 
