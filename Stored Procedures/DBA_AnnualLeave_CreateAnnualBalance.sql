@@ -1,5 +1,5 @@
-﻿
-CREATE   PROCEDURE [dbo].[DBA_AnnualLeave_CreateAnnualBalance] @Year INT
+﻿/*<info serverAlias="HRM-NexHRM,HRM-LumiHRM,HRM-NexVisionHRM" executers="wsv_hrm" isFunction="0"></info>*/
+ALTER PROCEDURE [dbo].[DBA_AnnualLeave_CreateAnnualBalance] @Year INT
     ,@EmpID INT = NULL
     ,@Description NVARCHAR(1000) = ''
     ,@ErrCode INT = 0 OUTPUT
@@ -12,7 +12,8 @@ DB: HRM_SMS
 Original: 
 
 Revisions:    
-	- Oliver@2024.12.31: change to new rule of AL credit
+	- 20241231@Oliver: change to new rule of AL credit
+	- 20251110@Henry: update to new rule of AL credit
 Param's Explanation:
 */
 BEGIN
@@ -55,25 +56,42 @@ BEGIN
             ,@FromDate FromDate
             ,@ToDate ToDate
             ,0 AS DeductDays
-            ,@CreditDays - 1
-				+ CASE 
-					WHEN eg.DepartmentId IN (1, 3) 
-					THEN (CASE 
-						WHEN FLOOR(DATEDIFF(DAY, DATEADD(year, 1, e.GroupDate), @EndDate)/730) > 19 THEN 19 
-						ELSE FLOOR(DATEDIFF(DAY, DATEADD(year, 1, e.GroupDate), @EndDate)/730) + 1
-						END)
-					ELSE (CASE 
-						WHEN FLOOR(DATEDIFF(DAY, e.GroupDate, @EndDate)/365) > 19 THEN 19 
-						ELSE FLOOR(DATEDIFF(DAY, e.GroupDate, @EndDate)/365) 
-						END)
-					END AS CreditDays
+            ,CASE
+                WHEN ISNULL(calc.BaseDays, 0) + ISNULL(FLOOR(ISNULL(calc.YearsAll, 0) / NULLIF(calc.YearsPerExtra, 0)), 0) > calc.MaxDays
+                     THEN calc.MaxDays
+                ELSE ISNULL(calc.BaseDays, 0) + ISNULL(FLOOR(ISNULL(calc.YearsAll, 0) / NULLIF(calc.YearsPerExtra, 0)), 0)
+            END AS CreditDays
             ,dbo.fnc_GetClientDateTime()
             ,NULL CreatedBy
             ,0 Deleted
             ,1 as IsOpenBalance
         FROM dbo.Employee e WITH (NOLOCK)
 		INNER JOIN dbo.EmployeeGroup eg WITH (NOLOCK) ON e.GroupId = eg.Id
-            LEFT JOIN (
+		LEFT JOIN bodb_HRM.dbo.EmployeeSummary es WITH (NOLOCK) ON e.Id = es.EmpId
+        CROSS APPLY (
+            SELECT
+                CASE
+                    WHEN ISNULL(es.IsLocal, 1) = 0
+                        THEN eg.ExpatBasicAnnualLeaveBalance
+                    ELSE eg.LocalBasicAnnualLeaveBalance
+                END AS BaseDays,
+                CASE
+                    WHEN ISNULL(es.IsLocal, 1) = 0
+                        THEN eg.ExpatYearsOfServiceForExtraLeave
+                    ELSE eg.LocalYearsOfServiceForExtraLeave
+                END AS YearsPerExtra,
+                DATEDIFF(YEAR, e.GroupDate, @FromDate)
+                - CASE 
+                    WHEN DATEFROMPARTS(YEAR(@FromDate), MONTH(e.GroupDate), DAY(e.GroupDate)) > @FromDate 
+                        THEN 1 
+                    ELSE 0 
+                END AS YearsAll,
+                CASE
+                    WHEN ISNULL(es.IsLocal, 1) = 0 THEN 37 -- Expat max
+                    ELSE 30 -- Local max
+                END AS MaxDays
+        ) AS calc
+        LEFT JOIN (
             SELECT MAX(FromDate) FromDate
                 ,EmpId
             FROM dbo.LeaveTrans lt

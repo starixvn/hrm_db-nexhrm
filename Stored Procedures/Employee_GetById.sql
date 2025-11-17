@@ -13,6 +13,7 @@ Revisions:
 	20252602@Henry.Dinh: Add Management Grade
     20250723@Henry.Dinh: Add AutoApproveRequest
     20250919@Mira: Get Payroll Company
+    20251113@Henry: Get isLocal
 Param's Explanation:
 
 */
@@ -96,6 +97,7 @@ BEGIN
         ,e.[ModifiedBy]
         ,e.[IsDeleted]
         ,[AutoApproveRequest]
+        ,esum.[IsLocal]
 		,[IsSpecialUser]
 		,[GroupDate]
         ,[PermanentAddress] AS [Address]
@@ -149,6 +151,7 @@ BEGIN
         LEFT JOIN dbo.EmployeeGroup AS g WITH (NOLOCK) ON e.GroupId = g.Id
         LEFT JOIN HRM.dbo.TOEIC AS toeic WITH (NOLOCK) ON e.Id = toeic.EmpId
         LEFT JOIN HRM.dbo.JobTitle AS jt WITH (NOLOCK) ON e.JobTitleId = jt.JobTitleId
+        LEFT JOIN [bodb_HRM].[dbo].[EmployeeSummary] AS esum WITH (NOLOCK) ON e.Id = esum.EmpId
         LEFT JOIN dbo.[Shift] AS sh2 WITH (NOLOCK) ON es.MonShift = sh2.Id
         LEFT JOIN dbo.[Shift] AS sh3 WITH (NOLOCK) ON es.TueShift = sh3.Id
         LEFT JOIN dbo.[Shift] AS sh4 WITH (NOLOCK) ON es.WedShift = sh4.Id
