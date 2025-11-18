@@ -1,50 +1,42 @@
-﻿
-CREATE   PROCEDURE [dbo].[WorkingTimeRequest_GetPendingRequest] 
+﻿/*<info serverAlias="HRM-NexHRM,HRM-LumiHRM,HRM-NexVisionHRM" executers="wsv_hrm" isFunction="0"></info>*/
+
+ALTER PROCEDURE [dbo].[WorkingTimeRequest_GetPendingRequest] 
 AS
 /*
-Created: 20240621@Oliver.Dang
-Task: Get all pending requests.
-DB: NexHRM
-Original: 
+    Created: 20240621@Oliver.Dang
+    Task: Get all pending requests.
+    DB: NexHRM
 
-Revisions:    
-	- 20250327@Henry: Update MGT Code -> MGT/COR code
-Param's Explanation:
-
+    Revisions:
+	    20250327@Henry: Update MGT Code -> MGT/COR code
+        20251118@Tim: fix bug get core team
+    Param's Explanation:
 */
 BEGIN
 	DECLARE @LeaderOfStandbyTeam INT,
 		@StandByTeam VARCHAR(50)
 		,@CoreTeamId INT = 0;
 
-	SELECT @CoreTeamId = ISNULL(MAX(CASE WHEN ss.Name = 'CoreTeamId' THEN g.Id END), 0)
-	FROM dbo.SystemSetting ss WITH (NOLOCK)
-	INNER JOIN dbo.[EmployeeGroup] g WITH (NOLOCK) ON g.GroupTeamId = ss.Value
-	WHERE ss.Name = 'CoreTeamId'
+	SELECT @CoreTeamId = ISNULL(MAX(CASE WHEN ss.Name = 'CoreTeamId' THEN g.GroupId END), 0)
+	FROM dbo.SystemSetting AS ss WITH (NOLOCK)
+	    INNER JOIN bodb_HRM.dbo.[Group] AS g WITH (NOLOCK) ON g.GroupTeamId = ss.[Value]
+	WHERE ss.[Name] = 'CoreTeamId'
 
-	SELECT @LeaderOfStandbyTeam = e.Id FROM dbo.Employee AS e WITH (NOLOCK)
-	INNER JOIN dbo.SystemSetting AS st WITH (NOLOCK) ON e.Id = st.Value AND st.Name = 'LeaderOfStandbyTeam'
+	SELECT @LeaderOfStandbyTeam = e.Id
+    FROM dbo.Employee AS e WITH (NOLOCK)
+	    INNER JOIN dbo.SystemSetting AS st WITH (NOLOCK) ON e.Id = st.[Value] AND st.[Name] = 'LeaderOfStandbyTeam'
 
-	SELECT @StandByTeam = st.Value FROM dbo.SystemSetting AS st WITH (NOLOCK) WHERE st.Name = 'StanbyTeam'
+	SELECT @StandByTeam = st.[Value]
+    FROM dbo.SystemSetting AS st WITH (NOLOCK) WHERE st.[Name] = 'StanbyTeam'
 
-    IF OBJECT_ID('tempdb..#PendingRequest') IS NOT NULL
-	BEGIN
-		DROP TABLE #PendingRequest
-	END
-
-	IF OBJECT_ID('tempdb..#ManagementApprover') IS NOT NULL
-	BEGIN
-		DROP TABLE #ManagementApprover
-	END
-
-	CREATE TABLE #ManagementApprover(
+	CREATE TABLE #tmpManagementApprover(
 		ApproverId INT
 		,Approver NVARCHAR(20)
 		,ApproverFullName NVARCHAR(50)
 		,ApproverConversationId VARCHAR(200)
 	)
 
-	CREATE TABLE #PendingRequest(
+	CREATE TABLE #tmpPendingRequest(
 		RequestId BIGINT
 		,EmpId INT
 		,GroupId INT
@@ -63,9 +55,9 @@ BEGIN
 		,Remark NVARCHAR(2000)
 		,IsManagementApprove BIT
 		,IsStandbyAtWeekend BIT
-		)
+	)
 
-	INSERT INTO #PendingRequest
+	INSERT INTO #tmpPendingRequest
 	SELECT r.Id as RequestId
 		  ,r.EmpId
 		  ,e.GroupId
@@ -95,32 +87,36 @@ BEGIN
 			THEN 1
 			ELSE 0
 			END) as IsStandbyAtWeekend
-	FROM dbo.WorkingTimeRequest r WITH (NOLOCK)
-	INNER JOIN dbo.Employee e with (nolock) on r.EmpId = e.Id
-	INNER JOIN dbo.EmployeeGroup g with (nolock) on e.GroupId = g.Id
-	LEFT JOIN dbo.LeaveType lv WITH (NOLOCK) ON lv.Id = r.LeaveTypeID
-	LEFT JOIN dbo.EmployeeCalendar c WITH (NOLOCK) ON c.empid = r.empid
-		AND DATEDIFF(D, c.WorkDate, r.FromDate) = 0
-	LEFT JOIN dbo.Shift s WITH (NOLOCK) ON s.id = c.ShiftID
-	WHERE e.[Enabled] = 1 AND ISNULL(e.isDeleted, 0 ) = 0 
+	FROM dbo.WorkingTimeRequest AS r WITH (NOLOCK)
+	    INNER JOIN dbo.Employee AS e with (nolock) on r.EmpId = e.Id
+	    INNER JOIN dbo.EmployeeGroup AS g with (nolock) on e.GroupId = g.Id
+	    LEFT JOIN dbo.LeaveType AS lv WITH (NOLOCK) ON lv.Id = r.LeaveTypeID
+	    LEFT JOIN dbo.EmployeeCalendar AS c WITH (NOLOCK) ON c.EmpId = r.EmpId
+		    AND c.WorkDate = CAST(r.FromDate AS DATE)
+	    LEFT JOIN dbo.[Shift] AS s WITH (NOLOCK) ON s.id = c.ShiftID
+	WHERE e.[Enabled] = 1
+        AND ISNULL(e.isDeleted, 0 ) = 0 
 		AND r.RequestType IN (1,2,6)
 		AND r.[Status] = 1
 	ORDER BY r.CreatedDate DESC
 
-
-	IF EXISTS(SELECT 1
-	FROM #PendingRequest 
-	WHERE IsManagementApprove = 1)
+	IF EXISTS (
+        SELECT 1
+	    FROM #tmpPendingRequest 
+	    WHERE IsManagementApprove = 1
+    )
 	BEGIN
-		INSERT INTO #ManagementApprover
+		INSERT INTO #tmpManagementApprover
 		SELECT e.Id
 			  ,e.NickName
 			  ,e.FullName
 			  ,con.ConversationId
 		FROM dbo.Employee AS e WITH (NOLOCK)
-		INNER JOIN dbo.EmployeeGroup AS eg ON e.GroupId = eg.Id
-		LEFT JOIN dbo.EmployeeConversation AS con WITH (NOLOCK) ON e.Id = con.EmpId
-		WHERE e.[Enabled] = 1 AND eg.Id = @CoreTeamId AND con.ConversationId <> ''
+		    INNER JOIN dbo.EmployeeGroup AS eg ON e.GroupId = eg.Id
+		    LEFT JOIN dbo.EmployeeConversation AS con WITH (NOLOCK) ON e.Id = con.EmpId
+		WHERE e.[Enabled] = 1
+            AND eg.Id = @CoreTeamId
+            AND con.ConversationId <> ''
 	END
 
 	SELECT pr.RequestId
@@ -142,8 +138,8 @@ BEGIN
 		 ,ap.Approver
 		 ,ap.ApproverFullName
 		 ,ap.ApproverConversationId
-	FROM #PendingRequest pr
-	CROSS JOIN  #ManagementApprover ap
+	FROM #tmpPendingRequest AS pr
+	    CROSS JOIN  #tmpManagementApprover AS ap
 	WHERE IsManagementApprove = 1
 
 	UNION
@@ -162,17 +158,16 @@ BEGIN
 		 ,pr.LeaveTypeName
 		 ,pr.CreatedDate
 		 ,pr.Remark
-		 ,e.Id as ApproverId
-		 ,e.NickName as Approver
+		 ,e.Id AS ApproverId
+		 ,e.NickName AS Approver
 		 ,e.FullName
-		 ,con.ConversationId as ApproverConversationId
-	FROM #PendingRequest pr
-	INNER JOIN dbo.Employee AS e WITH (NOLOCK) ON e.Id = @LeaderOfStandbyTeam
-	LEFT JOIN dbo.EmployeeConversation AS con WITH (NOLOCK) ON e.Id = con.EmpId AND con.ConversationId <> ''
+		 ,con.ConversationId AS ApproverConversationId
+	FROM #tmpPendingRequest AS pr
+	    INNER JOIN dbo.Employee AS e WITH (NOLOCK) ON e.Id = @LeaderOfStandbyTeam
+	    LEFT JOIN dbo.EmployeeConversation AS con WITH (NOLOCK) ON e.Id = con.EmpId AND con.ConversationId <> ''
 	WHERE pr.IsStandbyAtWeekend = 1
 
 	UNION
-
 	SELECT DISTINCT pr.RequestId
 		 ,pr.EmpId
 		 ,pr.Requester
@@ -188,23 +183,17 @@ BEGIN
 		 ,pr.LeaveTypeName
 		 ,pr.CreatedDate
 		 ,pr.Remark
-		 ,sup.ApproverId as ApproverId
-		 ,sup.ApproverNickName as Approver
+		 ,sup.ApproverId AS ApproverId
+		 ,sup.ApproverNickName AS Approver
 		 ,sup.ApproverFullName
-		 ,con.ConversationId as ApproverConversationId
-	FROM #PendingRequest pr
-	INNER JOIN dbo.EmployeeSupDetail AS sup WITH (NOLOCK) ON pr.EmpId = sup.EmpId
-	LEFT JOIN dbo.EmployeeConversation AS con WITH (NOLOCK) ON sup.ApproverId = con.EmpId AND con.ConversationId <> ''
+		 ,con.ConversationId AS ApproverConversationId
+	FROM #tmpPendingRequest AS pr
+	    INNER JOIN dbo.EmployeeSupDetail AS sup WITH (NOLOCK) ON pr.EmpId = sup.EmpId
+	    LEFT JOIN dbo.EmployeeConversation AS con WITH (NOLOCK) ON sup.ApproverId = con.EmpId AND con.ConversationId <> ''
 	WHERE pr.IsManagementApprove = 0
 		AND pr.IsStandbyAtWeekend = 0
 
-	IF OBJECT_ID('tempdb..#PendingRequest') IS NOT NULL
-	BEGIN
-		DROP TABLE #PendingRequest
-	END
+	DROP TABLE #tmpPendingRequest
 
-	IF OBJECT_ID('tempdb..#ManagementApprover') IS NOT NULL
-	BEGIN
-		DROP TABLE #ManagementApprover
-	END
+	DROP TABLE #tmpManagementApprover
 END
