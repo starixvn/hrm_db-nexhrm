@@ -57,7 +57,11 @@ BEGIN
 		,IsStandbyAtWeekend BIT
 	)
 
-	INSERT INTO #tmpPendingRequest
+	INSERT INTO #tmpPendingRequest(
+		RequestId, EmpId, GroupId, TeamName, Code, RequestType, CreatedDate
+		,Requester, FullNameRequester, FromDate, ToDate, TotalDays, FromShift
+		,LeaveTypeId, LeaveTypeName, Remark, IsManagementApprove, IsStandbyAtWeekend
+	)
 	SELECT r.Id as RequestId
 		  ,r.EmpId
 		  ,e.GroupId
@@ -106,11 +110,8 @@ BEGIN
 	    WHERE IsManagementApprove = 1
     )
 	BEGIN
-		INSERT INTO #tmpManagementApprover
-		SELECT e.Id
-			  ,e.NickName
-			  ,e.FullName
-			  ,con.ConversationId
+		INSERT INTO #tmpManagementApprover(ApproverId, Approver, ApproverFullName, ApproverConversationId)
+		SELECT e.Id, e.NickName, e.FullName, con.ConversationId
 		FROM dbo.Employee AS e WITH (NOLOCK)
 		    INNER JOIN dbo.EmployeeGroup AS eg ON e.GroupId = eg.Id
 		    LEFT JOIN dbo.EmployeeConversation AS con WITH (NOLOCK) ON e.Id = con.EmpId
