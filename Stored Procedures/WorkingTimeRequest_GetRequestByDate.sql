@@ -1,6 +1,8 @@
 ﻿/*<info serverAlias="HRM-NexHRM,HRM-LumiHRM,HRM-NexVisionHRM" executers="wsv_hrm" isFunction="0"></info>*/
 
-ALTER PROCEDURE [dbo].[WorkingTimeRequest_GetRequestByDate] @role INT
+ALTER PROCEDURE [dbo].[WorkingTimeRequest_GetRequestByDate]
+(
+    @role INT
     ,@fromdate DATETIME
     ,@todate DATETIME
     ,@empid INT = NULL
@@ -14,19 +16,20 @@ ALTER PROCEDURE [dbo].[WorkingTimeRequest_GetRequestByDate] @role INT
     ,@PageIndex INT = NULL
     ,@ItemsPerPage INT = NULL
     ,@TotalItem INT = NULL OUT
+)
 AS
 /*
-Created: 20150730@Quinn.Vo
-Task: Get requests by all types.
-DB: NexEPA
-Original: 
+    Created: 20150730@Quinn.Vo
+    Task: Get requests by all types.
+    DB: NexHRM
 
-Revisions:    
-	- 20250327@Henry: Update MGT Code -> MGT/COR code
-    - 20250707@Henry.Dinh: Query to bodb_HRM.dbo.Employee.
-	- 20250821@Jay: restructure [Redmine: #235678]
-    - 20250924@Jay: user status filter [Redmine: #239089]
-Param's Explanation:
+    Revisions:    
+        20250327@Henry: Update MGT Code -> MGT/COR code
+        20250707@Henry.Dinh: Query to bodb_HRM.dbo.Employee.
+        20250821@Jay: restructure [Redmine: #235678]
+        20250924@Jay: user status filter [Redmine: #239089]
+        20251118@Tim: fix bug get core team
+    Param's Explanation:
 
 */
 BEGIN
@@ -38,25 +41,21 @@ BEGIN
 		,@CoreTeamId INT = 0,
         @CEOTeamId INT = 0;
 
-	SELECT @CoreTeamId = ISNULL(MAX(CASE WHEN ss.Name = 'CoreTeamId' THEN g.Id END), 0),
-        @CEOTeamId = ISNULL(MAX(CASE WHEN ss.Name = 'CEOTeamId' THEN g.Id END), 0)
+	SELECT @CoreTeamId = ISNULL(MAX(CASE WHEN ss.[Name] = 'CoreTeamId' THEN g.GroupId END), 0),
+        @CEOTeamId = ISNULL(MAX(CASE WHEN ss.[Name] = 'CEOTeamId' THEN g.GroupId END), 0)
 	FROM dbo.SystemSetting ss WITH (NOLOCK)
-	INNER JOIN dbo.[EmployeeGroup] g WITH (NOLOCK) ON g.GroupTeamId = ss.Value
-	WHERE ss.Name IN ('CoreTeamId', 'CEOTeamId')
+        INNER JOIN bodb_HRM.dbo.[Group] AS g WITH (NOLOCK) ON g.GroupTeamId = ss.[Value]
+	WHERE ss.[Name] IN ('CoreTeamId', 'CEOTeamId')
 
-	SELECT @LeaderOfStandbyTeam = e.Id FROM dbo.Employee AS e WITH (NOLOCK)
-	INNER JOIN dbo.SystemSetting AS st WITH (NOLOCK) ON e.Id = st.Value AND st.Name = 'LeaderOfStandbyTeam'
+	SELECT @LeaderOfStandbyTeam = e.Id
+    FROM dbo.Employee AS e WITH (NOLOCK)
+	    INNER JOIN dbo.SystemSetting AS st WITH (NOLOCK) ON e.Id = st.Value AND st.Name = 'LeaderOfStandbyTeam'
 
-	SELECT @StandByTeam = st.Value FROM dbo.SystemSetting AS st WITH (NOLOCK) WHERE st.Name = 'StanbyTeam'
+	SELECT @StandByTeam = st.[Value]
+    FROM dbo.SystemSetting AS st WITH (NOLOCK)
+    WHERE st.Name = 'StanbyTeam'
 
-
-    IF OBJECT_ID('tempdb..#WorkingTimeRequest') IS NOT NULL
-    BEGIN
-        DROP TABLE #WorkingTimeRequest
-    END
-
-
-    CREATE TABLE #WorkingTimeRequest (
+    CREATE TABLE #tmpWorkingTimeRequest (
         Id BIGINT
         ,EmpId INT
         ,RequestType SMALLINT
@@ -90,15 +89,13 @@ BEGIN
 		,DepartmentName NVARCHAR(200)
         )
 
-    IF (
-            EXISTS (
-                SELECT 1
-                FROM [dbo].[Employee] AS e WITH (NOLOCK)
-				INNER JOIN dbo.EmployeeGroup AS g WITH (NOLOCK) ON e.GroupId = g.Id
-                WHERE e.ID = @excludedEmpID
-                    AND g.Id IN (@CoreTeamId, @CEOTeamId)
-                )
-            )
+    IF EXISTS (
+        SELECT 1
+        FROM [dbo].[Employee] AS e WITH (NOLOCK)
+			INNER JOIN bodb_HRM.dbo.[Group] AS g WITH (NOLOCK) ON e.GroupId = g.GroupId
+        WHERE e.ID = @excludedEmpID
+            AND g.GroupId IN (@CoreTeamId, @CEOTeamId)
+        )
     BEGIN
         SET @IsManagement = 1
     END
@@ -107,7 +104,7 @@ BEGIN
         SET @IsManagement = 0
     END
 
-	IF (@excludedEmpID = @LeaderOfStandbyTeam)
+	IF @excludedEmpID = @LeaderOfStandbyTeam
 	BEGIN
 		SET @IsLeaderOfStandByTeam = 1
 	END
@@ -119,12 +116,7 @@ BEGIN
 	IF ISNULL(@requestType, '') = ''
 	BEGIN
 		INSERT INTO @RequestTypeId (RequestType)
-		VALUES (1)
-			,(2)
-			,(3)
-			,(4)
-			,(5)
-			,(6)
+		VALUES (1), (2), (3), (4), (5), (6)
 	END
 	ELSE
 	BEGIN
@@ -133,19 +125,26 @@ BEGIN
 		FROM dbo.fnc_strSplit(@requestType, ',')
 	END
 
-    INSERT INTO #WorkingTimeRequest
+    INSERT INTO #tmpWorkingTimeRequest (
+        Id, EmpId, RequestType, RequestedDate, CreatedDate
+        ,[Status], Requester, FullNameRequester, EmailRequester
+        ,EmpEnabled, IsEmpDeleted, Team, TeamCode
+        ,ProcessedBy, FullNameProcessedBy, EmailProcessedBy, ProcessedDate
+        ,TotalDaysRequestInMonth, FromShift, ToShift, TotalMins, FromDate, ToDate, TotalDays
+        ,LeaveTypeId, LeaveTypeName, Remark, IsAllowUpdateStatus, IsCrossDate, UnitCode, DepartmentName
+    )
     SELECT r.Id
         ,r.empID
         ,r.RequestType
         ,r.FromDate AS RequestedDate
         ,r.CreatedDate
-        ,r.STATUS
+        ,r.[Status]
         ,e.NickName AS Requester
         ,e.FullName AS FullNameRequester
         ,e.Email AS EmailRequester
 		,e.[Enabled] AS EmpEnabled
 		,e.[IsDeleted] AS IsEmpDeleted
-        ,g.NAME AS Team
+        ,g.[Name] AS Team
         ,g.Code AS TeamCode
         ,CASE
             WHEN r.ProcessedBy = -1 THEN 'System'
@@ -163,7 +162,7 @@ BEGIN
                     FROM dbo.WorkingTimeRequest wt WITH (NOLOCK)
                     WHERE wt.EmpId = r.EmpId
                         AND wt.RequestType IN (1, 2)
-                        AND wt.STATUS = 2
+                        AND wt.[Status] = 2
                         AND wt.FromDate BETWEEN DATEADD(dd, - (DAY(r.FromDate) - 1), r.FromDate)
                             AND DATEADD(dd, - (DAY(DATEADD(mm, 1, r.FromDate)) - 1), DATEADD(mm, 1, r.FromDate))
                     )
@@ -172,7 +171,7 @@ BEGIN
                     FROM dbo.WorkingTimeRequest wt WITH (NOLOCK)
                     WHERE wt.EmpId = r.EmpId
                         AND wt.RequestType IN (3, 4)
-                        AND wt.STATUS = 2
+                        AND wt.[Status] = 2
                         AND wt.FromDate BETWEEN DATEADD(dd, - (DAY(r.FromDate) - 1), r.FromDate)
                             AND DATEADD(dd, - (DAY(DATEADD(mm, 1, r.FromDate)) - 1), DATEADD(mm, 1, r.FromDate))
                     )
@@ -181,7 +180,7 @@ BEGIN
                     FROM dbo.WorkingTimeRequest wt WITH (NOLOCK)
                     WHERE wt.EmpId = r.EmpId
                         AND wt.RequestType = 5
-                        AND wt.STATUS = 2
+                        AND wt.[Status] = 2
                         AND wt.FromDate BETWEEN DATEADD(dd, - (DAY(r.FromDate) - 1), r.FromDate)
                             AND DATEADD(dd, - (DAY(DATEADD(mm, 1, r.FromDate)) - 1), DATEADD(mm, 1, r.FromDate))
                     )
@@ -190,7 +189,7 @@ BEGIN
                     FROM dbo.WorkingTimeRequest wt WITH (NOLOCK)
                     WHERE wt.EmpId = r.EmpId
                         AND wt.RequestType = 6
-                        AND wt.STATUS = 2
+                        AND wt.[Status] = 2
                         AND wt.FromDate BETWEEN DATEADD(dd, - (DAY(r.FromDate) - 1), r.FromDate)
                             AND DATEADD(dd, - (DAY(DATEADD(mm, 1, r.FromDate)) - 1), DATEADD(mm, 1, r.FromDate))
                     ) END
@@ -208,7 +207,7 @@ BEGIN
         ,r.ToDate
         ,r.TotalDays
         ,lv.Id AS LeaveTypeId
-        ,lv.NAME AS LeaveTypeName
+        ,lv.[Name] AS LeaveTypeName
         ,r.Remark
         ,(CASE 
             WHEN (
@@ -239,10 +238,10 @@ BEGIN
         INNER JOIN dbo.Employee e WITH (NOLOCK) ON e.ID = r.empID
         INNER JOIN dbo.EmployeeGroup g WITH (NOLOCK) ON e.GroupID = g.ID
         LEFT JOIN dbo.EmployeeCalendar c WITH (NOLOCK) ON c.empid = r.empid
-        AND DATEDIFF(D, c.WorkDate, r.FromDate) = 0
-        LEFT JOIN dbo.Shift s1 WITH (NOLOCK) ON s1.Id = r.FromShift
-        LEFT JOIN dbo.Shift s2 WITH (NOLOCK) ON s2.Id = r.ToShift
-        LEFT JOIN dbo.Shift s3 WITH (NOLOCK) ON s3.id = c.ShiftID
+            AND c.WorkDate = CAST(r.FromDate AS DATE)
+        LEFT JOIN dbo.[Shift] s1 WITH (NOLOCK) ON s1.Id = r.FromShift
+        LEFT JOIN dbo.[Shift] s2 WITH (NOLOCK) ON s2.Id = r.ToShift
+        LEFT JOIN dbo.[Shift] s3 WITH (NOLOCK) ON s3.id = c.ShiftID
         LEFT JOIN dbo.LeaveType lv WITH (NOLOCK) ON lv.Id = r.LeaveTypeID
         LEFT JOIN bodb_HRM.dbo.CompanyEmployee ap WITH (NOLOCK) ON ap.EmpId = r.ProcessedBy
         LEFT JOIN bodb_HRM.dbo.Employee ape WITH (NOLOCK) ON ape.UserId = ap.UserId
@@ -257,7 +256,7 @@ BEGIN
             @empid IS NULL
             OR r.empid = @empid
             )
-        AND r.STATUS <> 3
+        AND r.[Status] <> 3
         AND (
             e.isDeleted IS NULL
             OR e.isDeleted = 0
@@ -268,16 +267,16 @@ BEGIN
             )
         AND (
             @status IS NULL
-            OR r.STATUS = @status
+            OR r.[Status] = @status
             )
 		AND (@groupid IS NULL
 				OR r.EmpId IN (SELECT Id FROM dbo.Employee WITH (NOLOCK) WHERE GroupId = @groupid)
 			)
         AND (
-                    @role NOT IN (1, 2)
-                    OR r.empID IN (
-						SELECT EmpId FROM dbo.EmployeeSupDetail WITH (NOLOCK) WHERE ApproverId = @excludedEmpID
-                        )
+            @role NOT IN (1, 2)
+            OR r.empID IN (
+				SELECT EmpId FROM dbo.EmployeeSupDetail WITH (NOLOCK) WHERE ApproverId = @excludedEmpID
+                )
             )
         AND (
             (
@@ -316,13 +315,13 @@ BEGIN
         ,r.RequestType
         ,r.FromDate AS RequestDate
         ,r.CreatedDate
-        ,r.STATUS
+        ,r.[Status]
         ,e.NickName AS Requester
         ,e.FullName AS FullNameRequester
         ,e.Email AS EmailRequester
 		,e.[Enabled] AS EmpEnabled
 		,e.[IsDeleted] AS IsEmpDeleted
-        ,g.NAME AS Team
+        ,g.[Name] AS Team
         ,g.Code AS TeamCode
         ,CASE
             WHEN r.ProcessedBy = -1 THEN 'System'
@@ -340,7 +339,7 @@ BEGIN
                     FROM dbo.WorkingTimeRequest wt WITH (NOLOCK)
                     WHERE wt.EmpId = r.EmpId
                         AND wt.RequestType IN (1, 2)
-                        AND wt.STATUS = 2
+                        AND wt.[Status] = 2
                         AND wt.FromDate BETWEEN DATEADD(dd, - (DAY(r.FromDate) - 1), r.FromDate)
                             AND DATEADD(dd, - (DAY(DATEADD(mm, 1, r.FromDate)) - 1), DATEADD(mm, 1, r.FromDate))
                     )
@@ -358,7 +357,7 @@ BEGIN
                     FROM dbo.WorkingTimeRequest wt WITH (NOLOCK)
                     WHERE wt.EmpId = r.EmpId
                         AND wt.RequestType = 5
-                        AND wt.STATUS = 2
+                        AND wt.[Status] = 2
                         AND wt.FromDate BETWEEN DATEADD(dd, - (DAY(r.FromDate) - 1), r.FromDate)
                             AND DATEADD(dd, - (DAY(DATEADD(mm, 1, r.FromDate)) - 1), DATEADD(mm, 1, r.FromDate))
                     )
@@ -367,7 +366,7 @@ BEGIN
                     FROM dbo.WorkingTimeRequest wt WITH (NOLOCK)
                     WHERE wt.EmpId = r.EmpId
                         AND wt.RequestType = 6
-                        AND wt.STATUS = 2
+                        AND wt.[Status] = 2
                         AND wt.FromDate BETWEEN DATEADD(dd, - (DAY(r.FromDate) - 1), r.FromDate)
                             AND DATEADD(dd, - (DAY(DATEADD(mm, 1, r.FromDate)) - 1), DATEADD(mm, 1, r.FromDate))
                     ) END
@@ -385,7 +384,7 @@ BEGIN
         ,r.ToDate
         ,r.TotalDays
         ,lv.Id AS LeaveTypeId
-        ,lv.NAME AS LeaveTypeName
+        ,lv.[Name] AS LeaveTypeName
         ,r.Remark
         ,1 AS IsAllowUpdateStatus
 		,r.IsCrossDate
@@ -395,10 +394,10 @@ BEGIN
         INNER JOIN Employee e WITH (NOLOCK) ON e.ID = r.empID
         INNER JOIN EmployeeGroup g WITH (NOLOCK) ON e.GroupID = g.ID
         INNER JOIN dbo.EmployeeCalendar c WITH (NOLOCK) ON c.empid = r.empid
-        AND DATEDIFF(D, c.WorkDate, r.FromDate) = 0
-        LEFT JOIN dbo.Shift s1 WITH (NOLOCK) ON s1.Id = r.FromShift
-        LEFT JOIN dbo.Shift s2 WITH (NOLOCK) ON s2.Id = r.ToShift
-        LEFT JOIN Shift s3 WITH (NOLOCK) ON s3.id = c.ShiftID
+        AND c.WorkDate = CAST(r.FromDate AS DATE)
+        LEFT JOIN dbo.[Shift] s1 WITH (NOLOCK) ON s1.Id = r.FromShift
+        LEFT JOIN dbo.[Shift] s2 WITH (NOLOCK) ON s2.Id = r.ToShift
+        LEFT JOIN dbo.[Shift] s3 WITH (NOLOCK) ON s3.id = c.ShiftID
         LEFT JOIN dbo.LeaveType lv WITH (NOLOCK) ON lv.Id = r.LeaveTypeID
         LEFT JOIN bodb_HRM.dbo.CompanyEmployee ap WITH (NOLOCK) ON ap.EmpId = r.ProcessedBy
         LEFT JOIN bodb_HRM.dbo.Employee ape WITH (NOLOCK) ON ape.UserId = ap.UserId
@@ -414,7 +413,7 @@ BEGIN
             @empid IS NULL
             OR r.empid = @empid
             )
-        AND r.STATUS <> 3
+        AND r.[Status] <> 3
         AND (
             e.isDeleted IS NULL
             OR e.isDeleted = 0
@@ -425,7 +424,7 @@ BEGIN
             )
         AND (
             @status IS NULL
-            OR r.STATUS = @status
+            OR r.[Status] = @status
             )
         AND @role IN (1, 2)
         AND (
@@ -477,13 +476,13 @@ BEGIN
         ,r.RequestType
         ,r.FromDate AS RequestDate
         ,r.CreatedDate
-        ,r.STATUS
+        ,r.[Status]
         ,e.NickName AS Requester
         ,e.FullName AS FullNameRequester
         ,e.Email AS EmailRequester
 		,e.[Enabled] AS EmpEnabled
 		,e.[IsDeleted] AS IsEmpDeleted
-        ,g.NAME AS Team
+        ,g.[Name] AS Team
         ,g.Code AS TeamCode 
         ,CASE
             WHEN r.ProcessedBy = -1 THEN 'System'
@@ -501,7 +500,7 @@ BEGIN
                     FROM dbo.WorkingTimeRequest wt WITH (NOLOCK)
                     WHERE wt.EmpId = r.EmpId
                         AND wt.RequestType IN (1, 2)
-                        AND wt.STATUS = 2
+                        AND wt.[Status] = 2
                         AND wt.FromDate BETWEEN DATEADD(dd, - (DAY(r.FromDate) - 1), r.FromDate)
                             AND DATEADD(dd, - (DAY(DATEADD(mm, 1, r.FromDate)) - 1), DATEADD(mm, 1, r.FromDate))
                     )
@@ -510,7 +509,7 @@ BEGIN
                     FROM dbo.WorkingTimeRequest wt WITH (NOLOCK)
                     WHERE wt.EmpId = r.EmpId
                         AND wt.RequestType IN (3, 4)
-                        AND wt.STATUS = 2
+                        AND wt.[Status] = 2
                         AND wt.FromDate BETWEEN DATEADD(dd, - (DAY(r.FromDate) - 1), r.FromDate)
                             AND DATEADD(dd, - (DAY(DATEADD(mm, 1, r.FromDate)) - 1), DATEADD(mm, 1, r.FromDate))
                     )
@@ -519,7 +518,7 @@ BEGIN
                     FROM dbo.WorkingTimeRequest wt WITH (NOLOCK)
                     WHERE wt.EmpId = r.EmpId
                         AND wt.RequestType = 5
-                        AND wt.STATUS = 2
+                        AND wt.[Status] = 2
                         AND wt.FromDate BETWEEN DATEADD(dd, - (DAY(r.FromDate) - 1), r.FromDate)
                             AND DATEADD(dd, - (DAY(DATEADD(mm, 1, r.FromDate)) - 1), DATEADD(mm, 1, r.FromDate))
                     )
@@ -528,7 +527,7 @@ BEGIN
                     FROM dbo.WorkingTimeRequest wt WITH (NOLOCK)
                     WHERE wt.EmpId = r.EmpId
                         AND wt.RequestType = 6
-                        AND wt.STATUS = 2
+                        AND wt.[Status] = 2
                         AND wt.FromDate BETWEEN DATEADD(dd, - (DAY(r.FromDate) - 1), r.FromDate)
                             AND DATEADD(dd, - (DAY(DATEADD(mm, 1, r.FromDate)) - 1), DATEADD(mm, 1, r.FromDate))
                     ) END
@@ -546,7 +545,7 @@ BEGIN
         ,r.ToDate
         ,r.TotalDays
         ,lv.Id AS LeaveTypeId
-        ,lv.NAME AS LeaveTypeName
+        ,lv.[Name] AS LeaveTypeName
         ,r.Remark
         ,1 AS IsAllowUpdateStatus
 		,r.IsCrossDate
@@ -556,10 +555,10 @@ BEGIN
         INNER JOIN Employee e WITH (NOLOCK) ON e.ID = r.empID
         INNER JOIN EmployeeGroup g WITH (NOLOCK) ON e.GroupID = g.ID
         INNER JOIN dbo.EmployeeCalendar c WITH (NOLOCK) ON c.empid = r.empid
-        AND DATEDIFF(D, c.WorkDate, r.FromDate) = 0
-        LEFT JOIN dbo.Shift s1 WITH (NOLOCK) ON s1.Id = r.FromShift
-        LEFT JOIN dbo.Shift s2 WITH (NOLOCK) ON s2.Id = r.ToShift
-        LEFT JOIN Shift s3 WITH (NOLOCK) ON s3.id = c.ShiftID
+        AND c.WorkDate = CAST(r.FromDate AS DATE)
+        LEFT JOIN dbo.[Shift] s1 WITH (NOLOCK) ON s1.Id = r.FromShift
+        LEFT JOIN dbo.[Shift] s2 WITH (NOLOCK) ON s2.Id = r.ToShift
+        LEFT JOIN dbo.[Shift] s3 WITH (NOLOCK) ON s3.id = c.ShiftID
         LEFT JOIN dbo.LeaveType lv WITH (NOLOCK) ON lv.Id = r.LeaveTypeID
         LEFT JOIN bodb_HRM.dbo.CompanyEmployee ap WITH (NOLOCK) ON ap.EmpId = r.ProcessedBy
         LEFT JOIN bodb_HRM.dbo.Employee ape WITH (NOLOCK) ON ape.UserId = ap.UserId
@@ -575,7 +574,7 @@ BEGIN
             @empid IS NULL
             OR r.empid = @empid
             )
-        AND r.STATUS <> 3
+        AND r.[Status] <> 3
         AND (
             e.isDeleted IS NULL
             OR e.isDeleted = 0
@@ -586,7 +585,7 @@ BEGIN
             )
         AND (
             @status IS NULL
-            OR r.STATUS = @status
+            OR r.[Status] = @status
             )
         AND @role IN (1, 2)
         AND (
@@ -633,7 +632,7 @@ BEGIN
         AND @ItemsPerPage IS NOT NULL
     BEGIN
         SELECT t.*
-        FROM #WorkingTimeRequest AS t
+        FROM #tmpWorkingTimeRequest AS t
         ORDER BY t.CreatedDate DESC
             ,t.FromDate DESC OFFSET(@PageIndex * @ItemsPerPage) ROWS
 
@@ -642,16 +641,13 @@ BEGIN
     ELSE
     BEGIN
         SELECT t.*
-        FROM #WorkingTimeRequest AS t
+        FROM #tmpWorkingTimeRequest AS t
         ORDER BY t.CreatedDate DESC
             ,t.FromDate DESC
     END
 
     SELECT @TotalItem = COUNT(*)
-    FROM #WorkingTimeRequest
+    FROM #tmpWorkingTimeRequest
 
-    IF OBJECT_ID('tempdb..#WorkingTimeRequest') IS NOT NULL
-    BEGIN
-        DROP TABLE #WorkingTimeRequest
-    END
+    DROP TABLE #tmpWorkingTimeRequest
 END
