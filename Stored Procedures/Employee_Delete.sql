@@ -2,8 +2,7 @@
 
 ALTER PROCEDURE [dbo].[Employee_Delete]
 (
-    @employeeId INT
-    ,@ResignedDate SMALLDATETIME
+    @empId INT
     ,@ModifiedBy INT = NULL
     ,@ErrCode INT = 0 OUTPUT
     ,@ErrMsg VARCHAR(200) = '' OUTPUT
@@ -16,36 +15,16 @@ AS
 
     Revisions:
         20250819@Tim: restructure [Redmine: #235678]
+        20251126@Tim: remove update ResignedDate
     Param's Explanation:
 */
 BEGIN
-    SET NOCOUNT ON
-
-    IF @ResignedDate IS NULL
-    BEGIN
-        SELECT @ErrCode = 1
-            ,@ErrMsg = 'The user cannot be deleted without resigned date.'
-
-        RETURN
-    END
+    SET NOCOUNT ON;
 
     UPDATE bodb_HRM.dbo.CompanyEmployee WITH (ROWLOCK)
     SET isDeleted = 1
+        ,[Enabled] = 0
         ,ModifiedBy = @ModifiedBy
         ,ModifiedDate = GETDATE()
-    WHERE EmpId = @employeeId
-
-	UPDATE e
-    SET e.ResignedDate = @ResignedDate
-    FROM bodb_HRM.dbo.Employee AS e WITH (ROWLOCK)
-        INNER JOIN bodb_HRM.dbo.CompanyEmployee AS ce WITH (NOLOCK) ON e.UserId = ce.UserId
-    WHERE ce.EmpId = @employeeId
-
-    DELETE dbo.EmployeeCalendar
-    WHERE WorkDate > @ResignedDate
-        AND empid = @employeeId
-
-    DELETE dbo.EmployeeAttendance
-    WHERE AttendanceDate > @ResignedDate
-        AND empid = @employeeId
+    WHERE EmpId = @empId
 END
