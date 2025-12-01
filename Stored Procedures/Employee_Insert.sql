@@ -31,23 +31,11 @@ AS
         20250507@Henry: insert password
         20250819@Tim: restructure [Redmine: #235678]
         20251114@Henry: init employee summary - islocal = 1
+        20251126@Tim: auto-generate CtrID [Redmine: #245211]
     Param's Explanation:
 */
 BEGIN
     SET NOCOUNT ON;
-
-	DECLARE @CompanyId INT
-        ,@OldEmpId INT
-
-	SELECT @CompanyId = [Value]
-    FROM dbo.SystemSetting WITH (NOLOCK)
-    WHERE [Name] = 'CompanyId'
-
-    SELECT @OldEmpId = MAX(OldEmpId)
-    FROM bodb_HRM.dbo.CompanyEmployee WITH (NOLOCK)
-    WHERE CompanyId = @CompanyId
-
-    SET @OldEmpId = ISNULL(@OldEmpId, 0) + 1
 
     IF EXISTS (
             SELECT 1
@@ -56,18 +44,30 @@ BEGIN
             )
     BEGIN
         SELECT @ErrCode = 1
-            ,@ErrMsg = 'This user has already existed !'
+            ,@ErrMsg = 'This user has already existed!'
 
         RETURN
     END
+
+	DECLARE @CompanyId INT
+        ,@MaxCtrId INT
+
+	SELECT @CompanyId = [Value]
+    FROM dbo.SystemSetting WITH (NOLOCK)
+    WHERE [Name] = 'CompanyId'
 
     SELECT @EmpId = MAX(EmpId)
     FROM bodb_HRM.dbo.CompanyEmployee WITH (NOLOCK)
 
     SET @EmpId = ISNULL(@EmpId, 0) + 1
 
-    INSERT INTO bodb_HRM.dbo.Employee (UserId, FullName, DOB, [Password])
-    VALUES (@UserId, @FullName, '1990-01-01', @Password)
+    SELECT @MaxCtrId = MAX(CtrId)
+    FROM bodb_HRM.dbo.Employee WITH (NOLOCK)
+
+    SET @MaxCtrId = ISNULL(@MaxCtrId, 0) + 1
+
+    INSERT INTO bodb_HRM.dbo.Employee (UserId, FullName, DOB, [Password], CtrId)
+    VALUES (@UserId, @FullName, '1990-01-01', @Password, @MaxCtrId)
 
 	INSERT INTO bodb_HRM.dbo.CompanyEmployee (CompanyId, EmpId, UserId, Code, Nickname, DomainUsername, GroupId, [Enabled], IsDeleted, IsSpecialUser, CreatedDate, CreatedBy)
 	VALUES (@CompanyId, @EmpId, @UserId, @Code, @Nickname, @DomainUsername, @GroupId, 1, 0, 0, GETDATE(), @createBy)
